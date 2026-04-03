@@ -8,62 +8,57 @@ import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Icon } from "@/components/Icon";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
-import { Track, Side } from "@/hooks/useAudioPlayer";
+import { Track, Side, MAX_SIDE_MS } from "@/hooks/useAudioPlayer";
 import colors from "@/constants/colors";
 
-const MAX = 6;
-
-function formatDur(s: number): string {
-  if (!s) return "--:--";
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${m}:${sec.toString().padStart(2, "0")}`;
+function formatMs(ms: number): string {
+  const total = Math.floor(ms / 1000);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-interface SlotProps {
-  track: Track | null;
+function totalMs(tracks: Track[]): number {
+  return tracks.reduce((s, t) => s + t.duration, 0);
+}
+
+interface TrackItemProps {
+  track: Track;
   index: number;
   isActive: boolean;
   isPlaying: boolean;
   side: Side;
   onPlay: () => void;
   onRemove: () => void;
-  onAdd: () => void;
 }
 
-function TrackSlot({ track, index, isActive, isPlaying, side, onPlay, onRemove, onAdd }: SlotProps) {
+function TrackItem({ track, index, isActive, isPlaying, side, onPlay, onRemove }: TrackItemProps) {
   const sideColor = side === "A" ? "#9e3c3c" : "#2b5499";
-  if (!track) {
-    return (
-      <TouchableOpacity style={styles.emptySlot} onPress={onAdd} activeOpacity={0.7}>
-        <View style={styles.slotNum}>
-          <Text style={styles.slotNumText}>{(index + 1).toString().padStart(2, "0")}</Text>
-        </View>
-        <Text style={styles.emptySlotText}>Add track</Text>
-        <Icon name="plus" size={18} color={colors.light.border} />
-      </TouchableOpacity>
-    );
-  }
   return (
     <TouchableOpacity
-      style={[styles.trackSlot, isActive && { backgroundColor: colors.light.secondary }]}
-      onPress={onPlay} onLongPress={onRemove}
-      activeOpacity={0.7} delayLongPress={500}
+      style={[styles.trackRow, isActive && { backgroundColor: colors.light.secondary }]}
+      onPress={onPlay}
+      onLongPress={onRemove}
+      activeOpacity={0.7}
+      delayLongPress={500}
     >
-      <View style={[styles.slotNum, isActive && { backgroundColor: sideColor, borderColor: sideColor }]}>
+      <View style={[styles.trackNum, isActive && { backgroundColor: sideColor, borderColor: sideColor }]}>
         {isActive && isPlaying
           ? <Icon name="volume-2" size={13} color="#fff" />
-          : <Text style={[styles.slotNumText, isActive && { color: "#fff" }]}>
+          : <Text style={[styles.trackNumText, isActive && { color: "#fff" }]}>
               {(index + 1).toString().padStart(2, "0")}
             </Text>
         }
       </View>
-      <Text style={[styles.trackName, isActive && { color: colors.light.cassetteBeige }]} numberOfLines={1}>
-        {track.title}
-      </Text>
-      <Text style={styles.trackDur}>{formatDur(track.duration)}</Text>
+      <View style={styles.trackInfo}>
+        <Text style={[styles.trackName, isActive && { color: colors.light.cassetteBeige }]} numberOfLines={1}>
+          {track.title}
+        </Text>
+      </View>
+      <Text style={styles.trackDur}>{track.duration > 0 ? formatMs(track.duration) : "--:--"}</Text>
       <TouchableOpacity
-        onPress={onRemove} style={styles.removeBtn}
+        onPress={onRemove}
+        style={styles.removeBtn}
         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
       >
         <Icon name="x" size={15} color={colors.light.border} />
@@ -86,7 +81,10 @@ interface SidePanelProps {
 
 function SidePanel({ side, tracks, currentSide, currentIndex, isPlaying, isAdding, onPlay, onRemove, onAdd }: SidePanelProps) {
   const sideColor = side === "A" ? "#9e3c3c" : "#2b5499";
-  const slots = Array.from({ length: MAX }, (_, i) => tracks[i] ?? null);
+  const used = totalMs(tracks);
+  const remaining = MAX_SIDE_MS - used;
+  const fillRatio = Math.min(1, used / MAX_SIDE_MS);
+  const isFull = remaining <= 0;
 
   return (
     <View style={styles.panel}>
@@ -94,36 +92,65 @@ function SidePanel({ side, tracks, currentSide, currentIndex, isPlaying, isAddin
         <View style={[styles.sideBadge, { backgroundColor: sideColor }]}>
           <Text style={styles.sideBadgeText}>SIDE {side}</Text>
         </View>
-        <Text style={[styles.panelCount, tracks.length === MAX && { color: colors.light.cassetteBeige }]}>
-          {tracks.length}/{MAX} tracks
-        </Text>
-        {tracks.length < MAX && (
-          <TouchableOpacity
-            style={[styles.addBtn, { borderColor: sideColor }]}
-            onPress={onAdd} disabled={isAdding} activeOpacity={0.8}
-          >
-            {isAdding
-              ? <ActivityIndicator size="small" color={sideColor} />
-              : <>
-                  <Icon name="plus" size={13} color={sideColor} />
-                  <Text style={[styles.addBtnText, { color: sideColor }]}>Add Files</Text>
-                </>
-            }
-          </TouchableOpacity>
-        )}
+        <View style={styles.panelHeaderRight}>
+          <Text style={[styles.timeUsed, isFull && { color: colors.light.cassetteBeige }]}>
+            {formatMs(used)}
+          </Text>
+          <Text style={styles.timeSep}>/</Text>
+          <Text style={styles.timeTotal}>30:00</Text>
+        </View>
       </View>
 
-      {slots.map((track, i) => (
-        <TrackSlot
-          key={i}
+      <View style={styles.tapeBar}>
+        <View style={[styles.tapeFill, { width: `${fillRatio * 100}%`, backgroundColor: sideColor }]} />
+      </View>
+
+      <Text style={[styles.timeRemaining, isFull && { color: "#c07040" }]}>
+        {isFull
+          ? "Tape full — 30:00 limit reached"
+          : `${formatMs(remaining)} remaining`
+        }
+      </Text>
+
+      {tracks.map((track, i) => (
+        <TrackItem
+          key={track.id}
           track={track} index={i} side={side}
           isActive={currentSide === side && currentIndex === i}
           isPlaying={isPlaying}
           onPlay={() => onPlay(i)}
           onRemove={() => onRemove(i)}
-          onAdd={onAdd}
         />
       ))}
+
+      {!isFull && (
+        <TouchableOpacity
+          style={[styles.addBtn, { borderColor: sideColor }, isAdding && styles.addBtnLoading]}
+          onPress={onAdd}
+          disabled={isAdding}
+          activeOpacity={0.8}
+        >
+          {isAdding ? (
+            <View style={styles.addingRow}>
+              <ActivityIndicator size="small" color={sideColor} />
+              <Text style={[styles.addBtnText, { color: sideColor }]}>Loading track durations…</Text>
+            </View>
+          ) : (
+            <View style={styles.addingRow}>
+              <Icon name="plus" size={16} color={sideColor} />
+              <Text style={[styles.addBtnText, { color: sideColor }]}>Add Audio Files</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      )}
+
+      {tracks.length === 0 && !isAdding && (
+        <View style={styles.emptyState}>
+          <Icon name="music" size={36} color={colors.light.mutedForeground} />
+          <Text style={styles.emptyStateText}>No tracks on Side {side}</Text>
+          <Text style={styles.emptyStateHint}>Tap "Add Audio Files" to load songs</Text>
+        </View>
+      )}
     </View>
   );
 }
@@ -164,6 +191,9 @@ export default function LibraryScreen() {
     addToSide(side);
   };
 
+  const aUsed = totalMs(sideA);
+  const bUsed = totalMs(sideB);
+
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
       <View style={styles.header}>
@@ -178,6 +208,8 @@ export default function LibraryScreen() {
         {(["A", "B"] as Side[]).map((s) => {
           const active = tab === s;
           const borderC = s === "A" ? "#9e3c3c" : "#2b5499";
+          const used = s === "A" ? aUsed : bUsed;
+          const pct = Math.min(100, Math.round((used / MAX_SIDE_MS) * 100));
           return (
             <TouchableOpacity
               key={s}
@@ -186,9 +218,7 @@ export default function LibraryScreen() {
               activeOpacity={0.8}
             >
               <Text style={[styles.tabText, active && styles.activeTabText]}>SIDE {s}</Text>
-              <Text style={[styles.tabCount, active && { color: borderC }]}>
-                {(s === "A" ? sideA : sideB).length}/{MAX}
-              </Text>
+              <Text style={[styles.tabPct, active && { color: borderC }]}>{pct}%</Text>
             </TouchableOpacity>
           );
         })}
@@ -196,7 +226,7 @@ export default function LibraryScreen() {
 
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={{ paddingBottom: bottomPad + 24 }}
+        contentContainerStyle={{ paddingBottom: bottomPad + 32 }}
         showsVerticalScrollIndicator={false}
       >
         {tab === "A"
@@ -235,6 +265,7 @@ const styles = StyleSheet.create({
   },
   iconBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   headerTitle: { color: colors.light.mutedForeground, fontSize: 11, fontFamily: "Inter_600SemiBold", letterSpacing: 3 },
+
   tabs: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: colors.light.border },
   tab: {
     flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
@@ -242,40 +273,67 @@ const styles = StyleSheet.create({
   },
   tabText: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: colors.light.mutedForeground, letterSpacing: 2 },
   activeTabText: { color: colors.light.cassetteCream },
-  tabCount: { fontSize: 11, fontFamily: "Inter_500Medium", color: colors.light.mutedForeground },
+  tabPct: { fontSize: 11, fontFamily: "Inter_500Medium", color: colors.light.mutedForeground },
+
   scroll: { flex: 1 },
   panel: { paddingHorizontal: 16, paddingTop: 16 },
-  panelHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+
+  panelHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   sideBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },
   sideBadgeText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 2 },
-  panelCount: { flex: 1, color: colors.light.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" },
-  addBtn: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    borderWidth: 1.5, borderRadius: 16, paddingHorizontal: 12, paddingVertical: 5,
-    minWidth: 36, justifyContent: "center",
+  panelHeaderRight: {
+    flex: 1, flexDirection: "row", alignItems: "center",
+    justifyContent: "flex-end", gap: 4,
   },
-  addBtnText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
-  emptySlot: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    paddingVertical: 12, paddingHorizontal: 4,
-    borderBottomWidth: 1, borderBottomColor: colors.light.border, opacity: 0.5,
+  timeUsed: { color: colors.light.cassetteCream, fontSize: 15, fontFamily: "Inter_700Bold", letterSpacing: 0.5 },
+  timeSep: { color: colors.light.mutedForeground, fontSize: 13 },
+  timeTotal: { color: colors.light.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" },
+
+  tapeBar: {
+    height: 5, backgroundColor: colors.light.secondary,
+    borderRadius: 3, overflow: "hidden", marginBottom: 6,
   },
-  emptySlotText: { flex: 1, color: colors.light.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular", fontStyle: "italic" },
-  trackSlot: {
+  tapeFill: { height: "100%", borderRadius: 3 },
+
+  timeRemaining: {
+    color: colors.light.mutedForeground, fontSize: 11,
+    fontFamily: "Inter_400Regular", marginBottom: 14,
+  },
+
+  trackRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
     paddingVertical: 12, paddingHorizontal: 4,
     borderBottomWidth: 1, borderBottomColor: colors.light.border,
   },
-  slotNum: {
+  trackNum: {
     width: 34, height: 34, borderRadius: 17,
     borderWidth: 1, borderColor: colors.light.border,
     backgroundColor: colors.light.card,
     alignItems: "center", justifyContent: "center",
   },
-  slotNumText: { color: colors.light.mutedForeground, fontSize: 11, fontFamily: "Inter_500Medium" },
-  trackName: { flex: 1, color: colors.light.cassetteCream, fontSize: 14, fontFamily: "Inter_500Medium", letterSpacing: 0.2 },
-  trackDur: { color: colors.light.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular", letterSpacing: 0.5 },
+  trackNumText: { color: colors.light.mutedForeground, fontSize: 11, fontFamily: "Inter_500Medium" },
+  trackInfo: { flex: 1 },
+  trackName: { color: colors.light.cassetteCream, fontSize: 14, fontFamily: "Inter_500Medium", letterSpacing: 0.2 },
+  trackDur: { color: colors.light.mutedForeground, fontSize: 11, fontFamily: "Inter_400Regular", letterSpacing: 0.5, minWidth: 38, textAlign: "right" },
   removeBtn: { padding: 4 },
-  hint: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 16, paddingHorizontal: 20, justifyContent: "center" },
+
+  addBtn: {
+    marginTop: 16, borderWidth: 1.5, borderRadius: 10,
+    paddingVertical: 14, paddingHorizontal: 20, alignItems: "center",
+  },
+  addBtnLoading: { opacity: 0.75 },
+  addingRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  addBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+
+  emptyState: {
+    alignItems: "center", paddingVertical: 40, gap: 10,
+  },
+  emptyStateText: { color: colors.light.cassetteCream, fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  emptyStateHint: { color: colors.light.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" },
+
+  hint: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    marginTop: 16, paddingHorizontal: 20, justifyContent: "center",
+  },
   hintText: { color: colors.light.mutedForeground, fontSize: 12, fontFamily: "Inter_400Regular" },
 });
