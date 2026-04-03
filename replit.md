@@ -25,3 +25,22 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+
+## Artifacts
+
+### Cassette Tape Music Player (`artifacts/cassette-player`)
+
+- **Type**: Expo (React Native) mobile app
+- **Preview path**: `/`
+- **Description**: Vintage 1980s cassette tape music player for Android with animated cassette UI
+- **Key packages**: expo-av (audio playback), expo-media-library (local music), react-native-svg (cassette SVG), react-native-reanimated (spool animations), expo-haptics (feedback)
+- **Architecture**: 
+  - `contexts/AudioPlayerContext.tsx` — shared audio state provider
+  - `hooks/useAudioPlayer.ts` — all audio/playback logic
+  - `components/CassetteTape.tsx` — main cassette SVG with label
+  - `components/Spool.tsx` — animated reel component
+  - `components/ControlButtons.tsx` — playback controls
+  - `components/ProgressBar.tsx` — progress display
+  - `app/player.tsx` — main player screen
+  - `app/library.tsx` — music library browser
+  - `constants/colors.ts` — vintage brown/beige color theme

@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "KtmJBH6awOfS1Rc6zbBnh"
+uri = "file://artifacts/cassette-player/assets/images/icon.png"
+type = "image"
+title = "cassette tape app icon"
