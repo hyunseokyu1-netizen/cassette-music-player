@@ -6,12 +6,12 @@ import Animated, {
   useSharedValue, withSequence, withTiming, useAnimatedStyle,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { CassetteTape } from "@/components/CassetteTape";
 import { ControlButtons } from "@/components/ControlButtons";
 import { ProgressBar } from "@/components/ProgressBar";
+import { Icon } from "@/components/Icon";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
 import colors from "@/constants/colors";
 
@@ -28,64 +28,50 @@ export default function PlayerScreen() {
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const cassetteScaleX = useSharedValue(1);
+  const scaleX = useSharedValue(1);
 
   const handleFlip = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    cassetteScaleX.value = withSequence(
+    scaleX.value = withSequence(
       withTiming(0, { duration: 180 }),
       withTiming(1, { duration: 180 })
     );
-    setTimeout(() => {
-      flipSide();
-    }, 180);
+    setTimeout(() => { flipSide(); }, 180);
   }, [flipSide]);
 
-  const cassetteAnimStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: cassetteScaleX.value }],
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ scaleX: scaleX.value }],
   }));
 
   const activeTracks = currentSide === "A" ? sideA : sideB;
   const trackTitles = activeTracks.map((t) => t.title);
-  const hasTracksCurrent = activeTracks.length > 0;
-  const sideA_count = sideA.length;
-  const sideB_count = sideB.length;
-
+  const hasTracks = activeTracks.length > 0;
   const sideColor = currentSide === "A" ? "#c0524a" : "#4a80c0";
 
   return (
     <View style={[styles.container, { paddingTop: topPad, paddingBottom: bottomPad }]}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.push("/library")}
-          style={styles.headerBtn} activeOpacity={0.7}
-        >
-          <Feather name="list" size={21} color={colors.light.cassetteBeige} />
+        <TouchableOpacity onPress={() => router.push("/library")} style={styles.btn} activeOpacity={0.7}>
+          <Icon name="list" size={22} color={colors.light.cassetteBeige} />
         </TouchableOpacity>
 
-        <View style={styles.headerCenter}>
-          <View style={[styles.sidePill, { borderColor: sideColor }]}>
-            <Text style={[styles.sidePillText, { color: sideColor }]}>
-              SIDE {currentSide}
-            </Text>
-          </View>
+        <View style={[styles.sidePill, { borderColor: sideColor }]}>
+          <Text style={[styles.sidePillText, { color: sideColor }]}>SIDE {currentSide}</Text>
         </View>
 
         <TouchableOpacity
-          onPress={handleFlip}
-          style={styles.headerBtn} activeOpacity={0.7}
+          onPress={handleFlip} style={styles.btn} activeOpacity={0.7}
           disabled={isTransitioning}
         >
-          <Feather
-            name="refresh-cw"
-            size={20}
+          <Icon
+            name="refresh-cw" size={20}
             color={isTransitioning ? colors.light.mutedForeground : colors.light.cassetteBeige}
           />
         </TouchableOpacity>
       </View>
 
       <View style={styles.cassetteWrapper}>
-        <Animated.View style={cassetteAnimStyle}>
+        <Animated.View style={animStyle}>
           <CassetteTape
             isPlaying={isPlaying}
             isTransitioning={isTransitioning}
@@ -101,35 +87,33 @@ export default function PlayerScreen() {
       <View style={styles.trackInfo}>
         {isTransitioning ? (
           <View style={styles.transitionRow}>
-            <View style={styles.noiseDot} />
+            <View style={styles.dot} />
             <Text style={styles.transitionText}>TAPE NOISE</Text>
-            <View style={styles.noiseDot} />
+            <View style={styles.dot} />
           </View>
         ) : (
           <Text style={styles.trackTitle} numberOfLines={2}>
-            {currentTrack?.title ?? (hasTracksCurrent ? "Tap play to start" : "Open library to add tracks")}
+            {currentTrack?.title ?? (hasTracks ? "Tap play to start" : "Open library to add tracks")}
           </Text>
         )}
         <View style={styles.sideRow}>
-          <Text style={[styles.sideCount, sideA_count > 0 && { color: "#c0524a" }]}>
-            {`A: ${sideA_count}/6`}
+          <Text style={[styles.sideCount, sideA.length > 0 && { color: "#c0524a" }]}>
+            {`A: ${sideA.length}/6`}
           </Text>
           <Text style={styles.sideDivider}>·</Text>
-          <Text style={[styles.sideCount, sideB_count > 0 && { color: "#4a80c0" }]}>
-            {`B: ${sideB_count}/6`}
+          <Text style={[styles.sideCount, sideB.length > 0 && { color: "#4a80c0" }]}>
+            {`B: ${sideB.length}/6`}
           </Text>
         </View>
       </View>
 
-      <View style={styles.progressContainer}>
-        <ProgressBar position={position} duration={duration} progress={progress} />
-      </View>
+      <ProgressBar position={position} duration={duration} progress={progress} />
 
       <View style={styles.controlsContainer}>
         <ControlButtons
           isPlaying={isPlaying}
           isLoading={isLoading || isTransitioning}
-          hasTracks={hasTracksCurrent}
+          hasTracks={hasTracks}
           onPlayPause={togglePlayPause}
           onNext={playNext}
           onPrevious={playPrevious}
@@ -140,12 +124,10 @@ export default function PlayerScreen() {
 
       <View style={styles.footer}>
         <TouchableOpacity
-          onPress={handleFlip}
-          style={styles.flipButton}
-          activeOpacity={0.8}
-          disabled={isTransitioning}
+          onPress={handleFlip} style={styles.flipButton}
+          activeOpacity={0.8} disabled={isTransitioning}
         >
-          <Feather name="refresh-cw" size={14} color={colors.light.cassetteDark} />
+          <Icon name="refresh-cw" size={13} color={colors.light.cassetteDark} />
           <Text style={styles.flipText}>FLIP TO SIDE {currentSide === "A" ? "B" : "A"}</Text>
         </TouchableOpacity>
       </View>
@@ -154,112 +136,42 @@ export default function PlayerScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.light.background,
-  },
+  container: { flex: 1, backgroundColor: colors.light.background },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: "row", alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 16, paddingVertical: 10,
   },
-  headerBtn: {
-    width: 44,
-    height: 44,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerCenter: {
-    alignItems: "center",
-  },
+  btn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   sidePill: {
-    borderWidth: 1.5,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
+    borderWidth: 1.5, borderRadius: 20,
+    paddingHorizontal: 16, paddingVertical: 4,
   },
-  sidePillText: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 2,
-  },
-  cassetteWrapper: {
-    alignItems: "center",
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-  },
+  sidePillText: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 2 },
+  cassetteWrapper: { alignItems: "center", paddingVertical: 14, paddingHorizontal: 18 },
   trackInfo: {
-    paddingHorizontal: 28,
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 16,
-    minHeight: 52,
-    justifyContent: "center",
+    paddingHorizontal: 28, alignItems: "center",
+    gap: 6, marginBottom: 14, minHeight: 52, justifyContent: "center",
   },
   trackTitle: {
-    color: colors.light.cassetteCream,
-    fontSize: 17,
-    fontFamily: "Inter_700Bold",
-    textAlign: "center",
-    letterSpacing: 0.4,
+    color: colors.light.cassetteCream, fontSize: 17,
+    fontFamily: "Inter_700Bold", textAlign: "center", letterSpacing: 0.4,
   },
-  transitionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
+  transitionRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   transitionText: {
-    color: colors.light.cassetteBeige,
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    letterSpacing: 3,
+    color: colors.light.cassetteBeige, fontSize: 12,
+    fontFamily: "Inter_600SemiBold", letterSpacing: 3,
   },
-  noiseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.light.cassetteBeige,
-    opacity: 0.7,
-  },
-  sideRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  sideCount: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    color: colors.light.mutedForeground,
-    letterSpacing: 0.5,
-  },
-  sideDivider: {
-    color: colors.light.mutedForeground,
-    fontSize: 12,
-  },
-  progressContainer: {
-    marginBottom: 20,
-  },
-  controlsContainer: {
-    marginBottom: 16,
-  },
-  footer: {
-    alignItems: "center",
-  },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.light.cassetteBeige, opacity: 0.7 },
+  sideRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  sideCount: { fontSize: 11, fontFamily: "Inter_500Medium", color: colors.light.mutedForeground, letterSpacing: 0.5 },
+  sideDivider: { color: colors.light.mutedForeground, fontSize: 12 },
+  controlsContainer: { marginTop: 16, marginBottom: 14 },
+  footer: { alignItems: "center" },
   flipButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 7,
+    flexDirection: "row", alignItems: "center", gap: 7,
     backgroundColor: colors.light.cassetteBeige,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20,
   },
-  flipText: {
-    color: colors.light.cassetteDark,
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 2,
-  },
+  flipText: { color: colors.light.cassetteDark, fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 2 },
 });
