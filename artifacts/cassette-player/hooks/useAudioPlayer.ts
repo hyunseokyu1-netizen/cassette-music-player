@@ -11,10 +11,20 @@ export interface Track {
   duration: number;
   uri: string;
   filename: string;
+  albumId?: string;
+}
+
+export interface MusicFolder {
+  id: string;
+  title: string;
+  trackCount: number;
 }
 
 interface AudioPlayerState {
   tracks: Track[];
+  allTracks: Track[];
+  folders: MusicFolder[];
+  selectedFolderId: string | null;
   currentIndex: number;
   currentTrack: Track | null;
   isPlaying: boolean;
@@ -38,12 +48,16 @@ interface AudioPlayerActions {
   seekBackward: (seconds?: number) => Promise<void>;
   requestPermission: () => Promise<void>;
   loadLibrary: () => Promise<void>;
+  selectFolder: (folderId: string | null) => void;
 }
 
 export type UseAudioPlayerReturn = AudioPlayerState & AudioPlayerActions;
 
 export function useAudioPlayer(): UseAudioPlayerReturn {
+  const [allTracks, setAllTracks] = useState<Track[]>([]);
   const [tracks, setTracks] = useState<Track[]>([]);
+  const [folders, setFolders] = useState<MusicFolder[]>([]);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -94,31 +108,92 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   const loadLibrary = useCallback(async () => {
     if (Platform.OS === "web") {
+      setAllTracks([]);
       setTracks([]);
       return;
     }
     try {
-      const media = await MediaLibrary.getAssetsAsync({
-        mediaType: MediaLibrary.MediaType.audio,
-        first: 500,
-        sortBy: [MediaLibrary.SortBy.default],
+      const albums = await MediaLibrary.getAlbumsAsync({
+        includeSmartAlbums: false,
       });
 
-      const loaded: Track[] = media.assets.map((asset) => ({
-        id: asset.id,
-        title: asset.filename.replace(/\.[^/.]+$/, ""),
-        artist: "Unknown Artist",
-        album: "Unknown Album",
-        duration: asset.duration,
-        uri: asset.uri,
-        filename: asset.filename,
-      }));
+      const allLoaded: Track[] = [];
+      const folderList: MusicFolder[] = [];
 
-      setTracks(loaded);
+      for (const album of albums) {
+        const media = await MediaLibrary.getAssetsAsync({
+          mediaType: MediaLibrary.MediaType.audio,
+          album: album.id,
+          first: 500,
+          sortBy: [MediaLibrary.SortBy.default],
+        });
+
+        if (media.assets.length > 0) {
+          folderList.push({
+            id: album.id,
+            title: album.title,
+            trackCount: media.assets.length,
+          });
+
+          for (const asset of media.assets) {
+            allLoaded.push({
+              id: asset.id,
+              title: asset.filename.replace(/\.[^/.]+$/, ""),
+              artist: "Unknown Artist",
+              album: album.title,
+              duration: asset.duration,
+              uri: asset.uri,
+              filename: asset.filename,
+              albumId: album.id,
+            });
+          }
+        }
+      }
+
+      if (allLoaded.length === 0) {
+        const media = await MediaLibrary.getAssetsAsync({
+          mediaType: MediaLibrary.MediaType.audio,
+          first: 500,
+          sortBy: [MediaLibrary.SortBy.default],
+        });
+
+        for (const asset of media.assets) {
+          allLoaded.push({
+            id: asset.id,
+            title: asset.filename.replace(/\.[^/.]+$/, ""),
+            artist: "Unknown Artist",
+            album: "Music",
+            duration: asset.duration,
+            uri: asset.uri,
+            filename: asset.filename,
+          });
+        }
+      }
+
+      const uniqueTracks = allLoaded.filter(
+        (t, i, arr) => arr.findIndex((x) => x.id === t.id) === i
+      );
+
+      setAllTracks(uniqueTracks);
+      setTracks(uniqueTracks);
+      setFolders(folderList);
     } catch (err) {
       console.warn("Failed to load music library", err);
     }
   }, []);
+
+  const selectFolder = useCallback(
+    (folderId: string | null) => {
+      setSelectedFolderId(folderId);
+      if (folderId === null) {
+        setTracks(allTracks);
+      } else {
+        setTracks(allTracks.filter((t) => t.albumId === folderId));
+      }
+      setCurrentIndex(-1);
+    },
+    [allTracks]
+  );
 
   useEffect(() => {
     (async () => {
@@ -265,6 +340,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   return {
     tracks,
+    allTracks,
+    folders,
+    selectedFolderId,
     currentIndex,
     currentTrack,
     isPlaying,
@@ -285,5 +363,6 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     seekBackward,
     requestPermission,
     loadLibrary,
+    selectFolder,
   };
 }

@@ -22,7 +22,8 @@
     "android": {
       "permissions": [
         "android.permission.READ_MEDIA_AUDIO",
-        "android.permission.READ_EXTERNAL_STORAGE"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
     "web": {
@@ -46,8 +47,8 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "Allow access to your photos.",
-          "savePhotosPermission": "Allow to save photos.",
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
+          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
           "isAccessMediaLocationEnabled": true
         }
       ]

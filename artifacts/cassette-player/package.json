@@ -57,6 +57,6 @@
   },
   "dependencies": {
     "expo-av": "^16.0.8",
-    "expo-media-library": "^55.0.10"
+    "expo-media-library": "^18.2.1"
   }
 }

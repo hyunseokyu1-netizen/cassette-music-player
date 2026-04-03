@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   TextInput,
   Platform,
+  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -53,8 +54,8 @@ function TrackItem({ track, index, isActive, isPlaying, onPress }: TrackItemProp
         >
           {track.title}
         </Text>
-        <Text style={styles.trackArtist} numberOfLines={1}>
-          {track.artist}
+        <Text style={styles.trackMeta} numberOfLines={1}>
+          {track.album}
         </Text>
       </View>
       <Text style={styles.trackDuration}>{formatDuration(track.duration)}</Text>
@@ -66,14 +67,18 @@ export default function LibraryScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [search, setSearch] = useState<string>("");
+  const [showFolders, setShowFolders] = useState<boolean>(false);
   const {
     tracks,
+    folders,
+    selectedFolderId,
     currentIndex,
     isPlaying,
     playTrack,
     hasPermission,
     permissionDenied,
     requestPermission,
+    selectFolder,
   } = useAudioPlayerContext();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -83,29 +88,49 @@ export default function LibraryScreen() {
     ? tracks.filter(
         (t) =>
           t.title.toLowerCase().includes(search.toLowerCase()) ||
-          t.artist.toLowerCase().includes(search.toLowerCase())
+          t.album.toLowerCase().includes(search.toLowerCase())
       )
     : tracks;
 
-  const handleTrackPress = (index: number) => {
-    const realIndex = tracks.indexOf(filteredTracks[index]);
+  const handleTrackPress = (filteredIndex: number) => {
+    const track = filteredTracks[filteredIndex];
+    const realIndex = tracks.findIndex((t) => t.id === track.id);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     playTrack(realIndex);
     router.back();
   };
+
+  const handleFolderSelect = (folderId: string | null) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    selectFolder(folderId);
+    setShowFolders(false);
+    setSearch("");
+  };
+
+  const selectedFolder = folders.find((f) => f.id === selectedFolderId);
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={styles.backBtn}
+          style={styles.iconBtn}
           activeOpacity={0.7}
         >
           <Feather name="arrow-left" size={22} color={colors.light.cassetteBeige} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>LIBRARY</Text>
-        <View style={styles.backBtn} />
+        <TouchableOpacity
+          onPress={() => setShowFolders(!showFolders)}
+          style={styles.iconBtn}
+          activeOpacity={0.7}
+        >
+          <Feather
+            name="folder"
+            size={20}
+            color={selectedFolderId ? colors.light.cassetteBeige : colors.light.mutedForeground}
+          />
+        </TouchableOpacity>
       </View>
 
       {permissionDenied ? (
@@ -115,11 +140,7 @@ export default function LibraryScreen() {
           <Text style={styles.emptyText}>
             Allow access to your music library to browse and play songs.
           </Text>
-          <TouchableOpacity
-            style={styles.permBtn}
-            onPress={requestPermission}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={styles.permBtn} onPress={requestPermission} activeOpacity={0.8}>
             <Text style={styles.permBtnText}>Grant Access</Text>
           </TouchableOpacity>
         </View>
@@ -131,16 +152,92 @@ export default function LibraryScreen() {
             Local music library is not available on this platform.
           </Text>
         </View>
-      ) : tracks.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Feather name="inbox" size={48} color={colors.light.mutedForeground} />
-          <Text style={styles.emptyTitle}>No Music Found</Text>
-          <Text style={styles.emptyText}>
-            Add music files to your device to see them here.
-          </Text>
-        </View>
       ) : (
         <>
+          {showFolders && folders.length > 0 && (
+            <View style={styles.folderPanel}>
+              <Text style={styles.folderPanelTitle}>SELECT FOLDER</Text>
+              <ScrollView
+                style={styles.folderScroll}
+                showsVerticalScrollIndicator={false}
+              >
+                <TouchableOpacity
+                  style={[styles.folderItem, !selectedFolderId && styles.activeFolderItem]}
+                  onPress={() => handleFolderSelect(null)}
+                  activeOpacity={0.7}
+                >
+                  <Feather
+                    name="music"
+                    size={16}
+                    color={!selectedFolderId ? colors.light.cassetteDark : colors.light.cassetteBeige}
+                  />
+                  <Text
+                    style={[styles.folderName, !selectedFolderId && styles.activeFolderName]}
+                    numberOfLines={1}
+                  >
+                    All Music
+                  </Text>
+                  <Text style={[styles.folderCount, !selectedFolderId && styles.activeFolderCount]}>
+                    {tracks.length + (selectedFolderId ? 0 : 0)}
+                  </Text>
+                </TouchableOpacity>
+                {folders.map((folder) => (
+                  <TouchableOpacity
+                    key={folder.id}
+                    style={[
+                      styles.folderItem,
+                      selectedFolderId === folder.id && styles.activeFolderItem,
+                    ]}
+                    onPress={() => handleFolderSelect(folder.id)}
+                    activeOpacity={0.7}
+                  >
+                    <Feather
+                      name="folder"
+                      size={16}
+                      color={
+                        selectedFolderId === folder.id
+                          ? colors.light.cassetteDark
+                          : colors.light.cassetteBeige
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.folderName,
+                        selectedFolderId === folder.id && styles.activeFolderName,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {folder.title}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.folderCount,
+                        selectedFolderId === folder.id && styles.activeFolderCount,
+                      ]}
+                    >
+                      {folder.trackCount}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {selectedFolder && (
+            <View style={styles.folderBadge}>
+              <Feather name="folder" size={13} color={colors.light.cassetteDark} />
+              <Text style={styles.folderBadgeText} numberOfLines={1}>
+                {selectedFolder.title}
+              </Text>
+              <TouchableOpacity
+                onPress={() => handleFolderSelect(null)}
+                activeOpacity={0.7}
+              >
+                <Feather name="x" size={13} color={colors.light.cassetteDark} />
+              </TouchableOpacity>
+            </View>
+          )}
+
           <View style={styles.searchContainer}>
             <Feather name="search" size={16} color={colors.light.mutedForeground} />
             <TextInput
@@ -157,29 +254,36 @@ export default function LibraryScreen() {
             )}
           </View>
 
-          <Text style={styles.countText}>
-            {filteredTracks.length} tracks
-          </Text>
+          <Text style={styles.countText}>{filteredTracks.length} tracks</Text>
 
-          <FlatList
-            data={filteredTracks}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item, index }) => {
-              const realIndex = tracks.indexOf(item);
-              return (
-                <TrackItem
-                  track={item}
-                  index={realIndex}
-                  isActive={realIndex === currentIndex}
-                  isPlaying={isPlaying}
-                  onPress={() => handleTrackPress(index)}
-                />
-              );
-            }}
-            contentContainerStyle={{ paddingBottom: bottomPad + 16 }}
-            showsVerticalScrollIndicator={false}
-            scrollEnabled={filteredTracks.length > 0}
-          />
+          {filteredTracks.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <Feather name="inbox" size={48} color={colors.light.mutedForeground} />
+              <Text style={styles.emptyTitle}>No Music Found</Text>
+              <Text style={styles.emptyText}>
+                {search ? "No tracks match your search." : "Add music files to your device."}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredTracks}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item, index }) => {
+                const realIndex = tracks.findIndex((t) => t.id === item.id);
+                return (
+                  <TrackItem
+                    track={item}
+                    index={index}
+                    isActive={realIndex === currentIndex}
+                    isPlaying={isPlaying}
+                    onPress={() => handleTrackPress(index)}
+                  />
+                );
+              }}
+              contentContainerStyle={{ paddingBottom: bottomPad + 16 }}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
         </>
       )}
     </View>
@@ -198,7 +302,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
-  backBtn: {
+  iconBtn: {
     width: 44,
     height: 44,
     alignItems: "center",
@@ -209,6 +313,75 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
     letterSpacing: 3,
+  },
+  folderPanel: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: colors.light.card,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.light.border,
+    maxHeight: 220,
+    padding: 8,
+  },
+  folderPanelTitle: {
+    color: colors.light.mutedForeground,
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 2,
+    paddingHorizontal: 8,
+    paddingBottom: 6,
+  },
+  folderScroll: {
+    flexGrow: 0,
+  },
+  folderItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    borderRadius: 6,
+  },
+  activeFolderItem: {
+    backgroundColor: colors.light.cassetteBeige,
+  },
+  folderName: {
+    flex: 1,
+    color: colors.light.cassetteCream,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
+  activeFolderName: {
+    color: colors.light.cassetteDark,
+    fontFamily: "Inter_700Bold",
+  },
+  folderCount: {
+    color: colors.light.mutedForeground,
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+  },
+  activeFolderCount: {
+    color: colors.light.cassetteAccent,
+    fontFamily: "Inter_600SemiBold",
+  },
+  folderBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    backgroundColor: colors.light.cassetteBeige,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignSelf: "flex-start",
+  },
+  folderBadgeText: {
+    color: colors.light.cassetteDark,
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    maxWidth: 200,
   },
   searchContainer: {
     flexDirection: "row",
@@ -286,7 +459,7 @@ const styles = StyleSheet.create({
     color: colors.light.cassetteBeige,
     fontFamily: "Inter_700Bold",
   },
-  trackArtist: {
+  trackMeta: {
     color: colors.light.mutedForeground,
     fontSize: 12,
     fontFamily: "Inter_400Regular",
