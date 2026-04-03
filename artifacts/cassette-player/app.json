@@ -14,18 +14,9 @@
       "backgroundColor": "#2c1a0e"
     },
     "ios": {
-      "supportsTablet": false,
-      "infoPlist": {
-        "NSAppleMusicUsageDescription": "This app needs access to your music library to play songs."
-      }
+      "supportsTablet": false
     },
-    "android": {
-      "permissions": [
-        "android.permission.READ_MEDIA_AUDIO",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
-      ]
-    },
+    "android": {},
     "web": {
       "favicon": "./assets/images/icon.png"
     },
@@ -42,14 +33,6 @@
         "expo-av",
         {
           "microphonePermission": false
-        }
-      ],
-      [
-        "expo-media-library",
-        {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
-          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos.",
-          "isAccessMediaLocationEnabled": true
         }
       ]
     ],

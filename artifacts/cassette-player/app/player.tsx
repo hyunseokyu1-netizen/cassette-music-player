@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Platform,
-  ScrollView,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -56,7 +55,7 @@ export default function PlayerScreen() {
           isPlaying={isPlaying}
           progress={progress}
           title={currentTrack?.title ?? "No Track"}
-          artist={currentTrack?.artist ?? "Select a song"}
+          artist={currentTrack?.folderName ?? "Open Library to add songs"}
           width={300}
         />
       </View>
@@ -66,16 +65,12 @@ export default function PlayerScreen() {
           {currentTrack?.title ?? "No Track Selected"}
         </Text>
         <Text style={styles.trackArtist} numberOfLines={1}>
-          {currentTrack?.artist ?? "Go to Library to select a song"}
+          {currentTrack?.folderName ?? "Open Library to add music files"}
         </Text>
       </View>
 
       <View style={styles.progressContainer}>
-        <ProgressBar
-          position={position}
-          duration={duration}
-          progress={progress}
-        />
+        <ProgressBar position={position} duration={duration} progress={progress} />
       </View>
 
       <View style={styles.controlsContainer}>
@@ -94,9 +89,7 @@ export default function PlayerScreen() {
       <View style={styles.footer}>
         <View style={styles.reel}>
           <View style={[styles.reelDot, { opacity: isPlaying ? 1 : 0.3 }]} />
-          <Text style={styles.reelText}>
-            {isPlaying ? "PLAYING" : "PAUSED"}
-          </Text>
+          <Text style={styles.reelText}>{isPlaying ? "PLAYING" : "PAUSED"}</Text>
           <View style={[styles.reelDot, { opacity: isPlaying ? 1 : 0.3 }]} />
         </View>
       </View>

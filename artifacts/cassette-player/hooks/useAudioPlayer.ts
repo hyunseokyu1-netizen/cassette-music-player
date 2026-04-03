@@ -1,7 +1,7 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Audio, AVPlaybackStatus } from "expo-av";
-import * as MediaLibrary from "expo-media-library";
+import * as DocumentPicker from "expo-document-picker";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Platform } from "react-native";
 
 export interface Track {
   id: string;
@@ -11,13 +11,30 @@ export interface Track {
   duration: number;
   uri: string;
   filename: string;
-  albumId?: string;
+  folderName: string;
 }
 
 export interface MusicFolder {
   id: string;
   title: string;
   trackCount: number;
+}
+
+const STORAGE_KEY = "@cassette_tracks";
+
+function extractFolderName(uri: string): string {
+  try {
+    const decoded = decodeURIComponent(uri);
+    const parts = decoded.split("/");
+    if (parts.length >= 2) {
+      return parts[parts.length - 2] || "Music";
+    }
+  } catch {}
+  return "Music";
+}
+
+function makeTrackId(uri: string): string {
+  return uri.replace(/[^a-zA-Z0-9]/g, "_").slice(-40);
 }
 
 interface AudioPlayerState {
@@ -29,11 +46,10 @@ interface AudioPlayerState {
   currentTrack: Track | null;
   isPlaying: boolean;
   isLoading: boolean;
+  isAdding: boolean;
   position: number;
   duration: number;
   progress: number;
-  hasPermission: boolean | null;
-  permissionDenied: boolean;
 }
 
 interface AudioPlayerActions {
@@ -46,8 +62,9 @@ interface AudioPlayerActions {
   seekTo: (position: number) => Promise<void>;
   seekForward: (seconds?: number) => Promise<void>;
   seekBackward: (seconds?: number) => Promise<void>;
-  requestPermission: () => Promise<void>;
-  loadLibrary: () => Promise<void>;
+  addFiles: () => Promise<void>;
+  removeTrack: (id: string) => void;
+  clearAll: () => void;
   selectFolder: (folderId: string | null) => void;
 }
 
@@ -61,10 +78,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isAdding, setIsAdding] = useState<boolean>(false);
   const [position, setPosition] = useState<number>(0);
   const [duration, setDuration] = useState<number>(0);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [permissionDenied, setPermissionDenied] = useState<boolean>(false);
 
   const soundRef = useRef<Audio.Sound | null>(null);
   const currentIndexRef = useRef<number>(-1);
@@ -78,6 +94,29 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     tracksRef.current = tracks;
   }, [tracks]);
 
+  const buildFolders = useCallback((trackList: Track[]): MusicFolder[] => {
+    const map = new Map<string, number>();
+    for (const t of trackList) {
+      map.set(t.folderName, (map.get(t.folderName) ?? 0) + 1);
+    }
+    return Array.from(map.entries()).map(([title, count]) => ({
+      id: title,
+      title,
+      trackCount: count,
+    }));
+  }, []);
+
+  const applyAll = useCallback(
+    (loaded: Track[], folderId: string | null) => {
+      setAllTracks(loaded);
+      const filtered =
+        folderId === null ? loaded : loaded.filter((t) => t.folderName === folderId);
+      setTracks(filtered);
+      setFolders(buildFolders(loaded));
+    },
+    [buildFolders]
+  );
+
   useEffect(() => {
     Audio.setAudioModeAsync({
       allowsRecordingIOS: false,
@@ -86,137 +125,110 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       shouldDuckAndroid: true,
       playThroughEarpieceAndroid: false,
     });
-    return () => {
-      if (soundRef.current) {
-        soundRef.current.unloadAsync();
+    (async () => {
+      const raw = await AsyncStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const saved: Track[] = JSON.parse(raw);
+        applyAll(saved, null);
       }
+    })();
+    return () => {
+      soundRef.current?.unloadAsync();
     };
   }, []);
 
-  const requestPermission = useCallback(async () => {
-    if (Platform.OS === "web") {
-      setHasPermission(false);
-      return;
-    }
-    const { status } = await MediaLibrary.requestPermissionsAsync();
-    const granted = status === "granted";
-    setHasPermission(granted);
-    if (!granted) {
-      setPermissionDenied(true);
-    }
+  const persist = useCallback(async (list: Track[]) => {
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(list));
   }, []);
 
-  const loadLibrary = useCallback(async () => {
-    if (Platform.OS === "web") {
-      setAllTracks([]);
-      setTracks([]);
-      return;
-    }
+  const addFiles = useCallback(async () => {
+    setIsAdding(true);
     try {
-      const albums = await MediaLibrary.getAlbumsAsync({
-        includeSmartAlbums: false,
+      const result = await DocumentPicker.getDocumentAsync({
+        type: "audio/*",
+        multiple: true,
+        copyToCacheDirectory: false,
       });
 
-      const allLoaded: Track[] = [];
-      const folderList: MusicFolder[] = [];
+      if (result.canceled) {
+        setIsAdding(false);
+        return;
+      }
 
-      for (const album of albums) {
-        const media = await MediaLibrary.getAssetsAsync({
-          mediaType: MediaLibrary.MediaType.audio,
-          album: album.id,
-          first: 500,
-          sortBy: [MediaLibrary.SortBy.default],
-        });
+      const newTracks: Track[] = result.assets.map((asset) => {
+        const filename = asset.name ?? asset.uri.split("/").pop() ?? "Unknown";
+        const folderName = extractFolderName(asset.uri);
+        return {
+          id: makeTrackId(asset.uri),
+          title: filename.replace(/\.[^/.]+$/, ""),
+          artist: "Unknown Artist",
+          album: folderName,
+          duration: 0,
+          uri: asset.uri,
+          filename,
+          folderName,
+        };
+      });
 
-        if (media.assets.length > 0) {
-          folderList.push({
-            id: album.id,
-            title: album.title,
-            trackCount: media.assets.length,
-          });
-
-          for (const asset of media.assets) {
-            allLoaded.push({
-              id: asset.id,
-              title: asset.filename.replace(/\.[^/.]+$/, ""),
-              artist: "Unknown Artist",
-              album: album.title,
-              duration: asset.duration,
-              uri: asset.uri,
-              filename: asset.filename,
-              albumId: album.id,
-            });
-          }
+      const merged = [...allTracks];
+      for (const t of newTracks) {
+        if (!merged.find((x) => x.id === t.id)) {
+          merged.push(t);
         }
       }
 
-      if (allLoaded.length === 0) {
-        const media = await MediaLibrary.getAssetsAsync({
-          mediaType: MediaLibrary.MediaType.audio,
-          first: 500,
-          sortBy: [MediaLibrary.SortBy.default],
-        });
-
-        for (const asset of media.assets) {
-          allLoaded.push({
-            id: asset.id,
-            title: asset.filename.replace(/\.[^/.]+$/, ""),
-            artist: "Unknown Artist",
-            album: "Music",
-            duration: asset.duration,
-            uri: asset.uri,
-            filename: asset.filename,
-          });
-        }
-      }
-
-      const uniqueTracks = allLoaded.filter(
-        (t, i, arr) => arr.findIndex((x) => x.id === t.id) === i
-      );
-
-      setAllTracks(uniqueTracks);
-      setTracks(uniqueTracks);
-      setFolders(folderList);
+      await persist(merged);
+      applyAll(merged, selectedFolderId);
     } catch (err) {
-      console.warn("Failed to load music library", err);
+      console.warn("addFiles error", err);
     }
-  }, []);
+    setIsAdding(false);
+  }, [allTracks, selectedFolderId, applyAll, persist]);
+
+  const removeTrack = useCallback(
+    (id: string) => {
+      const updated = allTracks.filter((t) => t.id !== id);
+      persist(updated);
+      applyAll(updated, selectedFolderId);
+      setCurrentIndex(-1);
+    },
+    [allTracks, selectedFolderId, applyAll, persist]
+  );
+
+  const clearAll = useCallback(() => {
+    persist([]);
+    setAllTracks([]);
+    setTracks([]);
+    setFolders([]);
+    setCurrentIndex(-1);
+    soundRef.current?.stopAsync();
+    soundRef.current?.unloadAsync();
+    soundRef.current = null;
+    setIsPlaying(false);
+    setPosition(0);
+    setDuration(0);
+  }, [persist]);
 
   const selectFolder = useCallback(
     (folderId: string | null) => {
       setSelectedFolderId(folderId);
-      if (folderId === null) {
-        setTracks(allTracks);
-      } else {
-        setTracks(allTracks.filter((t) => t.albumId === folderId));
-      }
+      setTracks(
+        folderId === null ? allTracks : allTracks.filter((t) => t.folderName === folderId)
+      );
       setCurrentIndex(-1);
     },
     [allTracks]
   );
-
-  useEffect(() => {
-    (async () => {
-      await requestPermission();
-    })();
-  }, [requestPermission]);
-
-  useEffect(() => {
-    if (hasPermission) {
-      loadLibrary();
-    }
-  }, [hasPermission, loadLibrary]);
 
   const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
     if (!status.isLoaded) return;
     setPosition(status.positionMillis);
     setDuration(status.durationMillis ?? 0);
     setIsPlaying(status.isPlaying);
-
     if (status.didJustFinish) {
-      const nextIndex = currentIndexRef.current + 1;
-      if (nextIndex < tracksRef.current.length) {
-        loadAndPlayTrack(nextIndex);
+      const next = currentIndexRef.current + 1;
+      if (next < tracksRef.current.length) {
+        loadAndPlayTrack(next);
       } else {
         setIsPlaying(false);
         setPosition(0);
@@ -227,79 +239,62 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const loadAndPlayTrack = useCallback(
     async (index: number) => {
       if (index < 0 || index >= tracksRef.current.length) return;
-
       const track = tracksRef.current[index];
       setIsLoading(true);
       setCurrentIndex(index);
-
       try {
         if (soundRef.current) {
           await soundRef.current.stopAsync();
           await soundRef.current.unloadAsync();
           soundRef.current = null;
         }
-
         const { sound } = await Audio.Sound.createAsync(
           { uri: track.uri },
           { shouldPlay: true },
           onPlaybackStatusUpdate
         );
-
         soundRef.current = sound;
         setIsPlaying(true);
-        setIsLoading(false);
       } catch (err) {
-        console.warn("Failed to load track", err);
-        setIsLoading(false);
+        console.warn("loadAndPlayTrack error", err);
       }
+      setIsLoading(false);
     },
     [onPlaybackStatusUpdate]
   );
 
   const play = useCallback(async () => {
-    if (soundRef.current) {
-      await soundRef.current.playAsync();
-      setIsPlaying(true);
-    }
+    await soundRef.current?.playAsync();
+    setIsPlaying(true);
   }, []);
 
   const pause = useCallback(async () => {
-    if (soundRef.current) {
-      await soundRef.current.pauseAsync();
-      setIsPlaying(false);
-    }
+    await soundRef.current?.pauseAsync();
+    setIsPlaying(false);
   }, []);
 
   const togglePlayPause = useCallback(async () => {
     if (isPlaying) {
       await pause();
-    } else {
-      if (soundRef.current) {
-        await play();
-      } else if (tracks.length > 0) {
-        await loadAndPlayTrack(0);
-      }
+    } else if (soundRef.current) {
+      await play();
+    } else if (tracks.length > 0) {
+      await loadAndPlayTrack(0);
     }
   }, [isPlaying, play, pause, tracks, loadAndPlayTrack]);
 
   const playNext = useCallback(async () => {
     const next = currentIndexRef.current + 1;
-    if (next < tracksRef.current.length) {
-      await loadAndPlayTrack(next);
-    }
+    if (next < tracksRef.current.length) await loadAndPlayTrack(next);
   }, [loadAndPlayTrack]);
 
   const playPrevious = useCallback(async () => {
     if (position > 3000) {
-      if (soundRef.current) {
-        await soundRef.current.setPositionAsync(0);
-      }
+      await soundRef.current?.setPositionAsync(0);
       return;
     }
     const prev = currentIndexRef.current - 1;
-    if (prev >= 0) {
-      await loadAndPlayTrack(prev);
-    }
+    if (prev >= 0) await loadAndPlayTrack(prev);
   }, [position, loadAndPlayTrack]);
 
   const playTrack = useCallback(
@@ -309,28 +304,22 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     [loadAndPlayTrack]
   );
 
-  const seekTo = useCallback(async (positionMs: number) => {
-    if (soundRef.current) {
-      await soundRef.current.setPositionAsync(positionMs);
-    }
+  const seekTo = useCallback(async (ms: number) => {
+    await soundRef.current?.setPositionAsync(ms);
   }, []);
 
   const seekForward = useCallback(
     async (seconds = 10) => {
-      if (soundRef.current) {
-        const newPos = Math.min(position + seconds * 1000, duration);
-        await soundRef.current.setPositionAsync(newPos);
-      }
+      const newPos = Math.min(position + seconds * 1000, duration);
+      await soundRef.current?.setPositionAsync(newPos);
     },
     [position, duration]
   );
 
   const seekBackward = useCallback(
     async (seconds = 10) => {
-      if (soundRef.current) {
-        const newPos = Math.max(0, position - seconds * 1000);
-        await soundRef.current.setPositionAsync(newPos);
-      }
+      const newPos = Math.max(0, position - seconds * 1000);
+      await soundRef.current?.setPositionAsync(newPos);
     },
     [position]
   );
@@ -347,11 +336,10 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     currentTrack,
     isPlaying,
     isLoading,
+    isAdding,
     position,
     duration,
     progress,
-    hasPermission,
-    permissionDenied,
     play,
     pause,
     togglePlayPause,
@@ -361,8 +349,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     seekTo,
     seekForward,
     seekBackward,
-    requestPermission,
-    loadLibrary,
+    addFiles,
+    removeTrack,
+    clearAll,
     selectFolder,
   };
 }
