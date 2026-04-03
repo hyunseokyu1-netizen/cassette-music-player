@@ -35,9 +35,9 @@ export function Spool({ size, radius, maxRadius, isPlaying }: SpoolProps) {
   useEffect(() => {
     isPlayingShared.value = isPlaying;
     if (isPlaying) {
-      runOnUI(() => {
+      runOnUI(function () {
         "worklet";
-        const step = () => {
+        function step() {
           "worklet";
           const r = radiusShared.value;
           const mr = maxRadiusShared.value;
@@ -46,14 +46,14 @@ export function Spool({ size, radius, maxRadius, isPlaying }: SpoolProps) {
           rotation.value = withTiming(
             rotation.value + 360,
             { duration: period, easing: Easing.linear },
-            (finished) => {
+            function (finished) {
               "worklet";
               if (finished && isPlayingShared.value) {
                 step();
               }
             }
           );
-        };
+        }
         step();
       })();
     } else {
