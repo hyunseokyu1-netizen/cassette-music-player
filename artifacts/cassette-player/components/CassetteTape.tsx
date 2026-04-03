@@ -1,264 +1,261 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import Svg, {
-  Rect,
-  Circle,
-  Path,
-  Defs,
-  RadialGradient,
-  Stop,
-  G,
-  Ellipse,
-  Line,
+  Rect, Circle, Path, Line, Defs,
+  LinearGradient, RadialGradient, Stop, G, Ellipse,
 } from "react-native-svg";
 import { Spool } from "./Spool";
-import colors from "@/constants/colors";
+import type { Side } from "@/hooks/useAudioPlayer";
 
 interface CassetteTapeProps {
   isPlaying: boolean;
+  isTransitioning: boolean;
   progress: number;
+  side: Side;
   title: string;
-  artist: string;
+  tracks: string[];
   width?: number;
 }
 
+const MAX_SPOOL_R = 33;
+const MIN_SPOOL_R = 11;
+const SPOOL_BOX = 86;
+
 export function CassetteTape({
-  isPlaying,
-  progress,
-  title,
-  artist,
-  width = 320,
+  isPlaying, isTransitioning, progress, side, title, tracks, width = 340,
 }: CassetteTapeProps) {
-  const height = width * 0.65;
+  const scale = width / 340;
+  const H = Math.round(200 * scale);
+  const W = width;
 
-  const spoolAreaY = height * 0.25;
-  const leftSpoolCX = width * 0.28;
-  const rightSpoolCX = width * 0.72;
-  const spoolCY = spoolAreaY + height * 0.18;
+  const s = scale;
 
-  const maxSpoolRadius = width * 0.14;
-  const minSpoolRadius = width * 0.06;
+  const leftRadius = MIN_SPOOL_R + (1 - progress) * (MAX_SPOOL_R - MIN_SPOOL_R);
+  const rightRadius = MIN_SPOOL_R + progress * (MAX_SPOOL_R - MIN_SPOOL_R);
 
-  const leftRadius = maxSpoolRadius - progress * (maxSpoolRadius - minSpoolRadius);
-  const rightRadius = minSpoolRadius + progress * (maxSpoolRadius - minSpoolRadius);
+  const leftSpoolCX = 130 * s;
+  const leftSpoolCY = 66 * s;
+  const rightSpoolCX = 210 * s;
+  const rightSpoolCY = 66 * s;
 
-  const leftSpoolSize = leftRadius * 2.2;
-  const rightSpoolSize = rightRadius * 2.2;
+  const winX = 56 * s, winY = 11 * s;
+  const winW = 228 * s, winH = 100 * s;
+  const winR = 9 * s;
+  const winBotY = winY + winH;
 
-  const windowW = width * 0.54;
-  const windowH = height * 0.32;
-  const windowX = (width - windowW) / 2;
-  const windowY = spoolCY - windowH / 2;
-  const windowR = 8;
+  const guideR = 5 * s;
+  const leftGuideX = winX + 16 * s;
+  const rightGuideX = winX + winW - 16 * s;
+  const guideY = winY + winH - 18 * s;
 
-  const labelW = width * 0.8;
-  const labelH = height * 0.28;
-  const labelX = (width - labelW) / 2;
-  const labelY = height * 0.62;
-
-  const screwR = width * 0.025;
-  const screwPositions = [
-    { x: width * 0.1, y: height * 0.12 },
-    { x: width * 0.9, y: height * 0.12 },
-    { x: width * 0.1, y: height * 0.88 },
-    { x: width * 0.9, y: height * 0.88 },
+  const screwR = 6 * s;
+  const screws = [
+    { x: 17 * s, y: 16 * s },
+    { x: 323 * s, y: 16 * s },
+    { x: 17 * s, y: 184 * s },
+    { x: 323 * s, y: 184 * s },
   ];
 
+  const labelX = 32 * s, labelY = 122 * s;
+  const labelW = 276 * s, labelH = 64 * s;
+  const sideColor = side === "A" ? "#7a2d2d" : "#1e3d6e";
+  const sideBg = side === "A" ? "#9e3c3c" : "#2b5499";
+
   return (
-    <View style={{ width, height }}>
-      <Svg width={width} height={height}>
+    <View style={{ width: W, height: H }}>
+      <Svg width={W} height={H}>
         <Defs>
-          <RadialGradient id="bodyGrad" cx="50%" cy="30%" r="70%">
-            <Stop offset="0%" stopColor="#5c3820" />
-            <Stop offset="100%" stopColor="#2c1a0e" />
-          </RadialGradient>
-          <RadialGradient id="windowGrad" cx="50%" cy="40%" r="60%">
-            <Stop offset="0%" stopColor="#1a0f07" />
-            <Stop offset="100%" stopColor="#0d0804" />
+          <LinearGradient id="bodyGrad" x1="0" y1="0" x2="0.3" y2="1">
+            <Stop offset="0%" stopColor="#2e1608" />
+            <Stop offset="40%" stopColor="#1c0e04" />
+            <Stop offset="100%" stopColor="#120903" />
+          </LinearGradient>
+          <LinearGradient id="bodyEdge" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="#3d2010" stopOpacity="0.8" />
+            <Stop offset="100%" stopColor="#0d0602" stopOpacity="0.8" />
+          </LinearGradient>
+          <LinearGradient id="winGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="#100804" />
+            <Stop offset="100%" stopColor="#080401" />
+          </LinearGradient>
+          <LinearGradient id="winGlass" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="rgba(255,200,130,0.08)" />
+            <Stop offset="35%" stopColor="rgba(255,200,130,0)" />
+          </LinearGradient>
+          <LinearGradient id="screwGrad" x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0%" stopColor="#6b4020" />
+            <Stop offset="100%" stopColor="#2c1408" />
+          </LinearGradient>
+          <RadialGradient id="labelGrad" cx="50%" cy="50%" r="75%">
+            <Stop offset="0%" stopColor="#f0e0c0" />
+            <Stop offset="100%" stopColor="#e8d4a8" />
           </RadialGradient>
         </Defs>
 
-        <Rect
-          x={2}
-          y={2}
-          width={width - 4}
-          height={height - 4}
-          rx={16}
-          ry={16}
-          fill="url(#bodyGrad)"
-          stroke={colors.light.border}
-          strokeWidth={2}
+        <Rect x={1} y={1} width={W - 2} height={H - 2} rx={15 * s} ry={15 * s}
+          fill="url(#bodyGrad)" stroke="#4a2810" strokeWidth={2} />
+
+        <Rect x={6 * s} y={6 * s} width={W - 12 * s} height={H - 12 * s}
+          rx={11 * s} ry={11 * s} fill="none"
+          stroke="rgba(255,180,80,0.06)" strokeWidth={1} />
+
+        <Rect x={winX} y={winY} width={winW} height={winH} rx={winR} ry={winR}
+          fill="url(#winGrad)" stroke="#3d1f08" strokeWidth={2.5} />
+
+        <Rect x={winX + 2} y={winY + 2} width={winW - 4} height={winH / 2}
+          rx={winR - 2} ry={winR - 2} fill="url(#winGlass)" />
+
+        <Rect x={winX + 1} y={winY + 1} width={winW - 2} height={winH - 2}
+          rx={winR - 1} ry={winR - 1} fill="none"
+          stroke="rgba(255,180,80,0.12)" strokeWidth={0.8} />
+
+        <Path
+          d={`M ${leftGuideX + guideR * 1.5} ${guideY} L ${rightGuideX - guideR * 1.5} ${guideY}`}
+          stroke="#0d0703" strokeWidth={3 * s} strokeLinecap="round" opacity={0.9}
+        />
+        <Path
+          d={`M ${leftGuideX + guideR * 1.5} ${guideY} L ${rightGuideX - guideR * 1.5} ${guideY}`}
+          stroke="rgba(120,70,20,0.3)" strokeWidth={1.5 * s} strokeLinecap="round"
         />
 
-        <Rect
-          x={width * 0.04}
-          y={height * 0.07}
-          width={width * 0.92}
-          height={height * 0.86}
-          rx={10}
-          ry={10}
-          fill="none"
-          stroke={colors.light.cassetteReelSpoke}
-          strokeWidth={0.8}
-          opacity={0.4}
-        />
+        <Circle cx={leftGuideX} cy={guideY} r={guideR}
+          fill="#241208" stroke="#4a2810" strokeWidth={1.2} />
+        <Circle cx={leftGuideX} cy={guideY} r={guideR * 0.45} fill="#4a2810" />
 
-        {screwPositions.map((pos, i) => (
+        <Circle cx={rightGuideX} cy={guideY} r={guideR}
+          fill="#241208" stroke="#4a2810" strokeWidth={1.2} />
+        <Circle cx={rightGuideX} cy={guideY} r={guideR * 0.45} fill="#4a2810" />
+
+        {[{ x: W / 2 - 9 * s, y: 5 * s }, { x: W / 2 + 9 * s, y: 5 * s }].map((h, i) => (
+          <Ellipse key={i} cx={h.x} cy={h.y} rx={5 * s} ry={4 * s}
+            fill="#0d0602" stroke="#2e1608" strokeWidth={1} />
+        ))}
+
+        {screws.map((sc, i) => (
           <G key={i}>
-            <Circle
-              cx={pos.x}
-              cy={pos.y}
-              r={screwR}
-              fill={colors.light.cassetteScrew}
-              stroke={colors.light.border}
-              strokeWidth={0.8}
-            />
-            <Line
-              x1={pos.x - screwR * 0.6}
-              y1={pos.y}
-              x2={pos.x + screwR * 0.6}
-              y2={pos.y}
-              stroke={colors.light.cassetteWindow}
-              strokeWidth={1}
-              strokeLinecap="round"
-            />
+            <Circle cx={sc.x} cy={sc.y} r={screwR}
+              fill="url(#screwGrad)" stroke="#5a3018" strokeWidth={1} />
+            <Line x1={sc.x - screwR * 0.55} y1={sc.y - screwR * 0.55}
+              x2={sc.x + screwR * 0.55} y2={sc.y + screwR * 0.55}
+              stroke="#1a0a04" strokeWidth={1.2} strokeLinecap="round" />
+            <Line x1={sc.x + screwR * 0.55} y1={sc.y - screwR * 0.55}
+              x2={sc.x - screwR * 0.55} y2={sc.y + screwR * 0.55}
+              stroke="#1a0a04" strokeWidth={1.2} strokeLinecap="round" />
           </G>
         ))}
 
-        <Rect
-          x={windowX}
-          y={windowY}
-          width={windowW}
-          height={windowH}
-          rx={windowR}
-          ry={windowR}
-          fill="url(#windowGrad)"
-          stroke={colors.light.border}
-          strokeWidth={1.5}
-          opacity={0.95}
-        />
+        <Rect x={labelX} y={labelY} width={labelW} height={labelH}
+          rx={4 * s} ry={4 * s} fill="url(#labelGrad)"
+          stroke="#c8a870" strokeWidth={1.2} />
 
-        <Rect
-          x={windowX + 2}
-          y={windowY + 2}
-          width={windowW - 4}
-          height={windowH - 4}
-          rx={windowR - 2}
-          ry={windowR - 2}
-          fill="none"
-          stroke={colors.light.cassetteReelSpoke}
-          strokeWidth={0.6}
-          opacity={0.3}
-        />
+        <Rect x={labelX} y={labelY} width={labelW} height={18 * s}
+          rx={4 * s} ry={4 * s} fill={sideBg} />
+        <Rect x={labelX} y={labelY + 14 * s} width={labelW} height={4 * s} fill={sideBg} />
 
-        <Path
-          d={`M ${width * 0.3} ${spoolCY + 5} Q ${width * 0.5} ${spoolCY + height * 0.07} ${width * 0.7} ${spoolCY + 5}`}
-          stroke={colors.light.tape}
-          strokeWidth={2.5}
-          fill="none"
-          opacity={0.6}
-        />
+        <Line x1={labelX + 6 * s} y1={labelY + 30 * s}
+          x2={labelX + labelW - 6 * s} y2={labelY + 30 * s}
+          stroke="rgba(160,120,60,0.4)" strokeWidth={0.8} />
+        <Line x1={labelX + 6 * s} y1={labelY + 42 * s}
+          x2={labelX + labelW - 6 * s} y2={labelY + 42 * s}
+          stroke="rgba(160,120,60,0.25)" strokeWidth={0.6} />
+        <Line x1={labelX + 6 * s} y1={labelY + 52 * s}
+          x2={labelX + labelW - 6 * s} y2={labelY + 52 * s}
+          stroke="rgba(160,120,60,0.25)" strokeWidth={0.6} />
 
-        <Rect
-          x={labelX}
-          y={labelY}
-          width={labelW}
-          height={labelH}
-          rx={4}
-          ry={4}
-          fill={colors.light.cassetteCream}
-          stroke={colors.light.cassetteLabelBorder}
-          strokeWidth={1.5}
-        />
-
-        <Rect
-          x={labelX + 4}
-          y={labelY + 4}
-          width={labelW - 8}
-          height={labelH - 8}
-          rx={2}
-          ry={2}
-          fill="none"
-          stroke={colors.light.cassetteLabelBorder}
-          strokeWidth={0.7}
-          opacity={0.5}
-        />
-
-        <Rect
-          x={labelX + 8}
-          y={labelY + 8}
-          width={labelW - 16}
-          height={4}
-          rx={2}
-          fill={colors.light.cassetteAccent}
-          opacity={0.6}
-        />
+        <Rect x={1} y={1} width={W - 2} height={H - 2} rx={15 * s} ry={15 * s}
+          fill="none" stroke="rgba(255,220,140,0.07)" strokeWidth={1} />
       </Svg>
 
       <View
-        style={[
-          StyleSheet.absoluteFill,
-          {
-            alignItems: "center",
-            justifyContent: "center",
-            top: labelY + 14,
-            bottom: height - (labelY + labelH) + 8,
-            left: labelX + 10,
-            right: width - (labelX + labelW) + 10,
-          },
-        ]}
+        style={{
+          position: "absolute",
+          left: labelX + 8 * s,
+          top: labelY + 2 * s,
+          width: labelW - 16 * s,
+          height: 16 * s,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
       >
-        <Text
-          style={{
-            color: colors.light.cassetteDark,
-            fontSize: 11,
-            fontWeight: "700" as const,
-            textAlign: "center",
-            letterSpacing: 1.5,
-            textTransform: "uppercase",
-          }}
-          numberOfLines={1}
-        >
-          {title || "No Track"}
+        <Text style={[styles.sideLabel, { fontSize: 8 * s, color: "rgba(255,255,255,0.9)" }]}>
+          {`◄ SIDE ${side} ►`}
         </Text>
-        <Text
-          style={{
-            color: colors.light.cassetteAccent,
-            fontSize: 9,
-            fontWeight: "500" as const,
-            textAlign: "center",
-            marginTop: 2,
-            letterSpacing: 0.8,
-          }}
-          numberOfLines={1}
-        >
-          {artist}
+        <Text style={[styles.sideLabel, { fontSize: 7 * s, color: "rgba(255,255,255,0.6)" }]}>
+          {isTransitioning ? "■■ LOADING" : isPlaying ? "▶ PLAY" : "■ STOP"}
         </Text>
       </View>
 
       <View
         style={{
           position: "absolute",
-          left: leftSpoolCX - leftSpoolSize / 2,
-          top: spoolCY - leftSpoolSize / 2,
-          width: leftSpoolSize,
-          height: leftSpoolSize,
+          left: labelX + 6 * s,
+          top: labelY + 22 * s,
+          width: labelW - 12 * s,
         }}
       >
-        <Spool size={leftSpoolSize} isPlaying={isPlaying} radius={leftRadius} />
+        <Text style={[styles.trackTitle, { fontSize: 9.5 * s }]} numberOfLines={1}>
+          {title || "NO TRACK LOADED"}
+        </Text>
+        {tracks.slice(0, 3).map((t, i) => (
+          <Text key={i} style={[styles.trackLine, { fontSize: 7.5 * s }]} numberOfLines={1}>
+            {`${i + 1}. ${t}`}
+          </Text>
+        ))}
       </View>
 
       <View
         style={{
           position: "absolute",
-          left: rightSpoolCX - rightSpoolSize / 2,
-          top: spoolCY - rightSpoolSize / 2,
-          width: rightSpoolSize,
-          height: rightSpoolSize,
+          left: leftSpoolCX - SPOOL_BOX * s / 2,
+          top: leftSpoolCY - SPOOL_BOX * s / 2,
+          width: SPOOL_BOX * s,
+          height: SPOOL_BOX * s,
         }}
       >
-        <Spool size={rightSpoolSize} isPlaying={isPlaying} radius={rightRadius} />
+        <Spool
+          size={SPOOL_BOX * s}
+          radius={leftRadius * s}
+          maxRadius={MAX_SPOOL_R * s}
+          isPlaying={isPlaying || isTransitioning}
+        />
+      </View>
+
+      <View
+        style={{
+          position: "absolute",
+          left: rightSpoolCX - SPOOL_BOX * s / 2,
+          top: rightSpoolCY - SPOOL_BOX * s / 2,
+          width: SPOOL_BOX * s,
+          height: SPOOL_BOX * s,
+        }}
+      >
+        <Spool
+          size={SPOOL_BOX * s}
+          radius={rightRadius * s}
+          maxRadius={MAX_SPOOL_R * s}
+          isPlaying={isPlaying || isTransitioning}
+        />
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  sideLabel: {
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1.5,
+  },
+  trackTitle: {
+    color: "#2c1a0e",
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  trackLine: {
+    color: "#5c3820",
+    fontFamily: "Inter_400Regular",
+    letterSpacing: 0.2,
+  },
+});
