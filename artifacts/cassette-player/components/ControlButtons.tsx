@@ -7,10 +7,8 @@ interface ControlButtonsProps {
   isPlaying: boolean;
   isLoading: boolean;
   hasTracks: boolean;
-  isFastForwarding: boolean;
   onPlayPause: () => void;
-  onFFStart: () => void;
-  onFFEnd: () => void;
+  onFastForward: (seconds: number) => void;
   onRewind: (seconds: number) => void;
 }
 
@@ -82,9 +80,10 @@ function DeckButton({
 }
 
 export function ControlButtons({
-  isPlaying, isLoading, hasTracks, isFastForwarding,
-  onPlayPause, onFFStart, onFFEnd, onRewind,
+  isPlaying, isLoading, hasTracks,
+  onPlayPause, onFastForward, onRewind,
 }: ControlButtonsProps) {
+  const ffRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rwRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdStart = useRef(0);
 
@@ -93,6 +92,17 @@ export function ControlButtons({
     if (held < 800) return 3;
     if (held < 2500) return 7;
     return 15;
+  };
+
+  const startFF = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    holdStart.current = Date.now();
+    onFastForward(getSeek());
+    ffRef.current = setInterval(() => onFastForward(getSeek()), 180);
+  }, [onFastForward]);
+
+  const stopFF = () => {
+    if (ffRef.current) { clearInterval(ffRef.current); ffRef.current = null; }
   };
 
   const startRW = useCallback(() => {
@@ -105,12 +115,6 @@ export function ControlButtons({
   const stopRW = () => {
     if (rwRef.current) { clearInterval(rwRef.current); rwRef.current = null; }
   };
-
-  const handleFFStart = useCallback(() => {
-    if (!isPlaying) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    onFFStart();
-  }, [isPlaying, onFFStart]);
 
   return (
     <View style={styles.container}>
@@ -138,11 +142,10 @@ export function ControlButtons({
           />
           <DeckButton
             label="▶▶"
-            subLabel={isFastForwarding ? "2×" : "FF"}
-            onPressIn={handleFFStart}
-            onPressOut={onFFEnd}
-            active={isFastForwarding}
-            disabled={!hasTracks || !isPlaying}
+            subLabel="FF"
+            onPressIn={startFF}
+            onPressOut={stopFF}
+            disabled={!hasTracks}
           />
         </View>
       </View>

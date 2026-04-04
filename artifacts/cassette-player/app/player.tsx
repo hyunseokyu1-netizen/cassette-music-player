@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, Platform,
 } from "react-native";
@@ -23,27 +23,8 @@ export default function PlayerScreen() {
     sideA, sideB, currentSide, currentTrack, currentItemIdx,
     isPlaying, isLoading, isPlayingNoise, position,
     togglePlayPause,
-    seekBackward, flipSide, setPlaybackRate,
+    seekForward, seekBackward, flipSide,
   } = useAudioPlayerContext();
-
-  const [isFastForwarding, setIsFastForwarding] = useState(false);
-
-  const handleFFStart = useCallback(async () => {
-    setIsFastForwarding(true);
-    await setPlaybackRate(2.0);
-  }, [setPlaybackRate]);
-
-  const handleFFEnd = useCallback(async () => {
-    setIsFastForwarding(false);
-    await setPlaybackRate(1.0);
-  }, [setPlaybackRate]);
-
-  useEffect(() => {
-    if (!isPlaying && isFastForwarding) {
-      setIsFastForwarding(false);
-      setPlaybackRate(1.0);
-    }
-  }, [isPlaying]);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -136,10 +117,8 @@ export default function PlayerScreen() {
           isPlaying={isPlaying}
           isLoading={isLoading}
           hasTracks={hasTracks}
-          isFastForwarding={isFastForwarding}
           onPlayPause={togglePlayPause}
-          onFFStart={handleFFStart}
-          onFFEnd={handleFFEnd}
+          onFastForward={(s) => seekForward(s)}
           onRewind={(s) => seekBackward(s)}
         />
       </View>

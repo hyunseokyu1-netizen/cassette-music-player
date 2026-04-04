@@ -81,7 +81,6 @@ export interface UseAudioPlayerReturn {
   seekTo: (ms: number) => Promise<void>;
   seekForward: (s?: number) => Promise<void>;
   seekBackward: (s?: number) => Promise<void>;
-  setPlaybackRate: (rate: number) => Promise<void>;
   flipSide: () => Promise<void>;
   addToSide: (side: Side) => Promise<void>;
   removeTrackItem: (side: Side, trackId: string) => void;
@@ -362,9 +361,6 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const seekBackward = useCallback(async (s = 10) => {
     await soundRef.current?.setPositionAsync(Math.max(0, position - s * 1000));
   }, [position]);
-  const setPlaybackRate = useCallback(async (rate: number) => {
-    await soundRef.current?.setRateAsync(rate, true);
-  }, []);
 
   const flipSide = useCallback(async () => {
     await cancelAll();
@@ -497,7 +493,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     position, duration, progress,
     togglePlayPause, play, pause, stopPlayback,
     playNext, playPrevious, playItemAt,
-    seekTo, seekForward, seekBackward, setPlaybackRate,
+    seekTo, seekForward, seekBackward,
     flipSide, addToSide, removeTrackItem, updateNoiseDuration, setSide,
   };
 }
