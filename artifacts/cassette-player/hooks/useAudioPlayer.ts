@@ -72,6 +72,9 @@ export interface UseAudioPlayerReturn {
   duration: number;
   progress: number;
   togglePlayPause: () => Promise<void>;
+  play: () => Promise<void>;
+  pause: () => Promise<void>;
+  stopPlayback: () => Promise<void>;
   playNext: () => Promise<void>;
   playPrevious: () => Promise<void>;
   playItemAt: (idx: number) => Promise<void>;
@@ -265,18 +268,10 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   useEffect(() => { playItemAtRef.current = playItemAt; }, [playItemAt]);
 
-  const togglePlayPause = useCallback(async () => {
-    if (isPlayingNoise) {
-      cancelRef.current = true;
-      await stopNoise();
-      setIsPlayingNoise(false);
-      setIsPlaying(false);
-      return;
-    }
-    if (isPlaying) {
-      await soundRef.current?.pauseAsync();
-      setIsPlaying(false);
-    } else if (soundRef.current) {
+  const play = useCallback(async () => {
+    if (isPlayingNoise) return;
+    if (isPlaying) return;
+    if (soundRef.current) {
       cancelRef.current = false;
       await soundRef.current.playAsync();
       setIsPlaying(true);
@@ -287,6 +282,30 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       await playItemAtRef.current?.(0);
     }
   }, [isPlaying, isPlayingNoise, getItems]);
+
+  const pause = useCallback(async () => {
+    if (isPlayingNoise) {
+      cancelRef.current = true;
+      await stopNoise();
+      setIsPlayingNoise(false);
+      setIsPlaying(false);
+      return;
+    }
+    if (!isPlaying) return;
+    await soundRef.current?.pauseAsync();
+    setIsPlaying(false);
+  }, [isPlaying, isPlayingNoise]);
+
+  const stopPlayback = useCallback(async () => {
+    await cancelAll();
+    setCurrentItemIdx(-1);
+    itemIdxRef.current = -1;
+  }, [cancelAll]);
+
+  const togglePlayPause = useCallback(async () => {
+    if (isPlaying || isPlayingNoise) await pause();
+    else await play();
+  }, [isPlaying, isPlayingNoise, play, pause]);
 
   const findNextTrack = (items: SideItem[], from: number) => {
     for (let i = from + 1; i < items.length; i++)
@@ -472,7 +491,8 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     sideA, sideB, currentSide, currentItemIdx, currentTrack,
     isPlaying, isPlayingNoise, isLoading, isAdding,
     position, duration, progress,
-    togglePlayPause, playNext, playPrevious, playItemAt,
+    togglePlayPause, play, pause, stopPlayback,
+    playNext, playPrevious, playItemAt,
     seekTo, seekForward, seekBackward,
     flipSide, addToSide, removeTrackItem, updateNoiseDuration, setSide,
   };

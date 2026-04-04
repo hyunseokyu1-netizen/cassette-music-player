@@ -22,7 +22,8 @@ export default function PlayerScreen() {
   const {
     sideA, sideB, currentSide, currentTrack, currentItemIdx,
     isPlaying, isLoading, isPlayingNoise, position,
-    togglePlayPause, seekForward, seekBackward, flipSide,
+    play, pause, stopPlayback,
+    seekForward, seekBackward, flipSide,
   } = useAudioPlayerContext();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -95,7 +96,7 @@ export default function PlayerScreen() {
           </View>
         ) : (
           <Text style={styles.trackTitle} numberOfLines={2}>
-            {currentTrack?.title ?? (hasTracks ? "Tap play to start" : "Open library to add tracks")}
+            {currentTrack?.title ?? (hasTracks ? "Tap PLAY to start" : "Open library to add tracks")}
           </Text>
         )}
         <View style={styles.sideRow}>
@@ -115,10 +116,13 @@ export default function PlayerScreen() {
         <ControlButtons
           isPlaying={isPlaying}
           isLoading={isLoading}
+          isPlayingNoise={isPlayingNoise}
           hasTracks={hasTracks}
-          onPlayPause={togglePlayPause}
-          onFastForward={seekForward}
-          onRewind={seekBackward}
+          onPlay={play}
+          onPause={pause}
+          onStop={stopPlayback}
+          onFastForward={(s) => seekForward(s)}
+          onRewind={(s) => seekBackward(s)}
         />
       </View>
 
@@ -141,10 +145,10 @@ const styles = StyleSheet.create({
   btn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   sidePill: { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 4 },
   sidePillText: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 2 },
-  cassetteWrapper: { alignItems: "center", paddingVertical: 14, paddingHorizontal: 18 },
+  cassetteWrapper: { alignItems: "center", paddingVertical: 10, paddingHorizontal: 18 },
   trackInfo: {
     paddingHorizontal: 28, alignItems: "center", gap: 6,
-    marginBottom: 14, minHeight: 52, justifyContent: "center",
+    marginBottom: 12, minHeight: 52, justifyContent: "center",
   },
   trackTitle: {
     color: colors.light.cassetteCream, fontSize: 17,
@@ -156,7 +160,7 @@ const styles = StyleSheet.create({
   sideRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   sideCount: { fontSize: 11, fontFamily: "Inter_500Medium", color: colors.light.mutedForeground, letterSpacing: 0.5 },
   sideDot: { color: colors.light.mutedForeground, fontSize: 12 },
-  controls: { marginTop: 16, marginBottom: 14 },
+  controls: { marginTop: 12, marginBottom: 14 },
   footer: { alignItems: "center" },
   flipBtn: {
     flexDirection: "row", alignItems: "center", gap: 7,
