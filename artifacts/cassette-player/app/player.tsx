@@ -22,7 +22,7 @@ export default function PlayerScreen() {
   const {
     sideA, sideB, currentSide, currentTrack, currentItemIdx,
     isPlaying, isLoading, isPlayingNoise, position,
-    play, pause, stopPlayback,
+    togglePlayPause,
     seekForward, seekBackward, flipSide,
   } = useAudioPlayerContext();
 
@@ -116,11 +116,8 @@ export default function PlayerScreen() {
         <ControlButtons
           isPlaying={isPlaying}
           isLoading={isLoading}
-          isPlayingNoise={isPlayingNoise}
           hasTracks={hasTracks}
-          onPlay={play}
-          onPause={pause}
-          onStop={stopPlayback}
+          onPlayPause={togglePlayPause}
           onFastForward={(s) => seekForward(s)}
           onRewind={(s) => seekBackward(s)}
         />

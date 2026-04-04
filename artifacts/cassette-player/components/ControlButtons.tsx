@@ -1,17 +1,13 @@
-import React, { useRef, useState, useCallback } from "react";
-import {
-  View, Text, StyleSheet, Pressable, ActivityIndicator,
-} from "react-native";
+import React, { useRef, useCallback } from "react";
+import { View, Text, StyleSheet, Pressable, ActivityIndicator } from "react-native";
 import * as Haptics from "expo-haptics";
+import colors from "@/constants/colors";
 
 interface ControlButtonsProps {
   isPlaying: boolean;
   isLoading: boolean;
-  isPlayingNoise: boolean;
   hasTracks: boolean;
-  onPlay: () => void;
-  onPause: () => void;
-  onStop: () => void;
+  onPlayPause: () => void;
   onFastForward: (seconds: number) => void;
   onRewind: (seconds: number) => void;
 }
@@ -25,18 +21,19 @@ function DeckButton({
   active,
   disabled,
   isLoading,
-  wide,
+  size,
 }: {
   label: string;
-  subLabel?: string;
+  subLabel: string;
   onPress?: () => void;
   onPressIn?: () => void;
   onPressOut?: () => void;
   active?: boolean;
   disabled?: boolean;
   isLoading?: boolean;
-  wide?: boolean;
+  size?: "normal" | "large";
 }) {
+  const isLarge = size === "large";
   return (
     <Pressable
       onPress={onPress}
@@ -45,7 +42,7 @@ function DeckButton({
       disabled={disabled}
       style={({ pressed }) => [
         styles.button,
-        wide && styles.buttonWide,
+        isLarge && styles.buttonLarge,
         pressed && styles.buttonPressed,
         active && styles.buttonActive,
         disabled && styles.buttonDisabled,
@@ -54,29 +51,28 @@ function DeckButton({
       {({ pressed }) => (
         <View style={styles.buttonInner}>
           {isLoading ? (
-            <ActivityIndicator size="small" color="#c8c4b0" />
+            <ActivityIndicator size="small" color={colors.light.cassetteBeige} />
           ) : (
             <>
               <Text style={[
-                styles.buttonLabel,
-                active && styles.buttonLabelActive,
-                disabled && styles.buttonLabelDisabled,
-                pressed && styles.buttonLabelPressed,
+                styles.label,
+                isLarge && styles.labelLarge,
+                active && styles.labelActive,
+                pressed && !disabled && styles.labelPressed,
+                disabled && styles.labelDisabled,
               ]}>
                 {label}
               </Text>
-              {subLabel ? (
-                <Text style={[
-                  styles.buttonSubLabel,
-                  active && styles.buttonLabelActive,
-                  disabled && styles.buttonLabelDisabled,
-                ]}>
-                  {subLabel}
-                </Text>
-              ) : null}
+              <Text style={[
+                styles.subLabel,
+                active && styles.subLabelActive,
+                disabled && styles.subLabelDisabled,
+              ]}>
+                {subLabel}
+              </Text>
             </>
           )}
-          {active && <View style={styles.activeLed} />}
+          {active && <View style={styles.led} />}
         </View>
       )}
     </Pressable>
@@ -84,211 +80,211 @@ function DeckButton({
 }
 
 export function ControlButtons({
-  isPlaying, isLoading, isPlayingNoise, hasTracks,
-  onPlay, onPause, onStop, onFastForward, onRewind,
+  isPlaying, isLoading, hasTracks,
+  onPlayPause, onFastForward, onRewind,
 }: ControlButtonsProps) {
-  const ffIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const rwIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const holdStartRef = useRef<number>(0);
+  const ffRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rwRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const holdStart = useRef(0);
 
-  const clearFF = () => {
-    if (ffIntervalRef.current) { clearInterval(ffIntervalRef.current); ffIntervalRef.current = null; }
-  };
-  const clearRW = () => {
-    if (rwIntervalRef.current) { clearInterval(rwIntervalRef.current); rwIntervalRef.current = null; }
-  };
-
-  const getSeekSeconds = () => {
-    const held = Date.now() - holdStartRef.current;
+  const getSeek = () => {
+    const held = Date.now() - holdStart.current;
     if (held < 800) return 3;
-    if (held < 2500) return 6;
-    return 12;
+    if (held < 2500) return 7;
+    return 15;
   };
 
   const startFF = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    holdStartRef.current = Date.now();
-    onFastForward(getSeekSeconds());
-    ffIntervalRef.current = setInterval(() => {
-      onFastForward(getSeekSeconds());
-    }, 180);
+    holdStart.current = Date.now();
+    onFastForward(getSeek());
+    ffRef.current = setInterval(() => onFastForward(getSeek()), 180);
   }, [onFastForward]);
+
+  const stopFF = () => {
+    if (ffRef.current) { clearInterval(ffRef.current); ffRef.current = null; }
+  };
 
   const startRW = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    holdStartRef.current = Date.now();
-    onRewind(getSeekSeconds());
-    rwIntervalRef.current = setInterval(() => {
-      onRewind(getSeekSeconds());
-    }, 180);
+    holdStart.current = Date.now();
+    onRewind(getSeek());
+    rwRef.current = setInterval(() => onRewind(getSeek()), 180);
   }, [onRewind]);
 
-  const disabled = !hasTracks;
+  const stopRW = () => {
+    if (rwRef.current) { clearInterval(rwRef.current); rwRef.current = null; }
+  };
 
   return (
-    <View style={styles.panel}>
-      <View style={styles.panelInner}>
+    <View style={styles.container}>
+      <View style={styles.panel}>
+        <View style={styles.panelRidge} />
         <View style={styles.row}>
-          <DeckButton
-            label="■"
-            subLabel="STOP"
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onStop(); }}
-            disabled={disabled}
-          />
           <DeckButton
             label="◄◄"
             subLabel="REW"
             onPressIn={startRW}
-            onPressOut={clearRW}
-            disabled={disabled}
+            onPressOut={stopRW}
+            disabled={!hasTracks}
           />
           <DeckButton
-            label="▶"
-            subLabel="PLAY"
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onPlay(); }}
-            active={isPlaying && !isPlayingNoise}
-            disabled={disabled}
+            label={isPlaying ? "‖" : "▶"}
+            subLabel={isPlaying ? "PAUSE" : "PLAY"}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              onPlayPause();
+            }}
+            active={isPlaying}
+            disabled={!hasTracks}
             isLoading={isLoading}
-            wide
-          />
-          <DeckButton
-            label="‖"
-            subLabel="PAUSE"
-            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPause(); }}
-            active={!isPlaying && !isPlayingNoise && hasTracks}
-            disabled={disabled}
+            size="large"
           />
           <DeckButton
             label="▶▶"
             subLabel="FF"
             onPressIn={startFF}
-            onPressOut={clearFF}
-            disabled={disabled}
+            onPressOut={stopFF}
+            disabled={!hasTracks}
           />
         </View>
       </View>
-      <View style={styles.panelBase} />
     </View>
   );
 }
 
-const PANEL_BG = "#252530";
-const BTN_BASE = "#3a3a50";
-const BTN_HIGHLIGHT = "#5c5c78";
-const BTN_SHADOW = "#14141e";
-const BTN_ACTIVE_BG = "#2a2a44";
-const BTN_ACTIVE_GLOW = "#8878ff";
-const LABEL_COLOR = "#b0aec8";
-const LABEL_ACTIVE = "#ffffff";
-const LABEL_DISABLED = "#555566";
+const BTN_BG = "#3a2510";
+const BTN_TOP = "#5c3820";
+const BTN_BOTTOM = "#1a0e06";
+const BTN_ACTIVE_BG = "#6b3412";
+const BTN_ACTIVE_TOP = "#a05828";
 
 const styles = StyleSheet.create({
-  panel: {
+  container: {
     alignItems: "center",
+    paddingHorizontal: 24,
   },
-  panelInner: {
-    backgroundColor: PANEL_BG,
-    borderRadius: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+  panel: {
+    backgroundColor: colors.light.card,
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
     borderTopWidth: 2,
-    borderLeftWidth: 2,
-    borderTopColor: "#3a3a50",
-    borderLeftColor: "#3a3a50",
+    borderLeftWidth: 1,
+    borderTopColor: colors.light.border,
+    borderLeftColor: colors.light.border,
     borderBottomWidth: 3,
     borderRightWidth: 2,
-    borderBottomColor: "#0e0e18",
-    borderRightColor: "#0e0e18",
+    borderBottomColor: colors.light.cassetteDark,
+    borderRightColor: colors.light.cassetteDark,
+    width: "100%",
   },
-  panelBase: {
-    height: 5,
-    backgroundColor: "#0e0e18",
-    width: "80%",
-    borderBottomLeftRadius: 5,
-    borderBottomRightRadius: 5,
+  panelRidge: {
+    position: "absolute",
+    top: 0,
+    left: 20,
+    right: 20,
+    height: 3,
+    backgroundColor: colors.light.border,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+    opacity: 0.5,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 14,
   },
+
   button: {
-    width: 52,
-    height: 56,
-    borderRadius: 5,
-    backgroundColor: BTN_BASE,
+    width: 68,
+    height: 60,
+    borderRadius: 6,
+    backgroundColor: BTN_BG,
     borderTopWidth: 2,
-    borderLeftWidth: 2,
-    borderTopColor: BTN_HIGHLIGHT,
-    borderLeftColor: BTN_HIGHLIGHT,
+    borderLeftWidth: 1,
+    borderTopColor: BTN_TOP,
+    borderLeftColor: BTN_TOP,
     borderBottomWidth: 3,
     borderRightWidth: 2,
-    borderBottomColor: BTN_SHADOW,
-    borderRightColor: BTN_SHADOW,
-    overflow: "visible",
+    borderBottomColor: BTN_BOTTOM,
+    borderRightColor: BTN_BOTTOM,
   },
-  buttonWide: {
-    width: 62,
+  buttonLarge: {
+    width: 84,
+    height: 72,
+    borderRadius: 8,
   },
   buttonPressed: {
-    backgroundColor: "#2e2e40",
-    borderTopColor: BTN_SHADOW,
-    borderLeftColor: BTN_SHADOW,
-    borderBottomColor: BTN_HIGHLIGHT,
-    borderRightColor: BTN_HIGHLIGHT,
-    transform: [{ translateY: 1 }],
+    borderTopColor: BTN_BOTTOM,
+    borderLeftColor: BTN_BOTTOM,
+    borderBottomColor: BTN_TOP,
+    borderRightColor: BTN_TOP,
+    transform: [{ translateY: 2 }],
   },
   buttonActive: {
     backgroundColor: BTN_ACTIVE_BG,
-    borderTopColor: BTN_ACTIVE_GLOW,
-    borderLeftColor: BTN_ACTIVE_GLOW,
-    borderBottomColor: BTN_SHADOW,
-    borderRightColor: BTN_SHADOW,
+    borderTopColor: BTN_ACTIVE_TOP,
+    borderLeftColor: BTN_ACTIVE_TOP,
+    borderBottomColor: BTN_BOTTOM,
+    borderRightColor: BTN_BOTTOM,
   },
   buttonDisabled: {
-    opacity: 0.4,
+    opacity: 0.35,
   },
+
   buttonInner: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 3,
+    gap: 4,
     position: "relative",
   },
-  buttonLabel: {
+
+  label: {
     fontSize: 20,
-    color: LABEL_COLOR,
+    color: colors.light.mutedForeground,
     fontFamily: "Inter_700Bold",
     lineHeight: 24,
   },
-  buttonSubLabel: {
+  labelLarge: {
+    fontSize: 26,
+    lineHeight: 30,
+  },
+  labelActive: {
+    color: colors.light.cassetteBeige,
+  },
+  labelPressed: {
+    opacity: 0.75,
+  },
+  labelDisabled: {
+    color: colors.light.border,
+  },
+
+  subLabel: {
     fontSize: 8,
-    color: LABEL_COLOR,
+    color: colors.light.mutedForeground,
     fontFamily: "Inter_700Bold",
     letterSpacing: 1.5,
-    opacity: 0.65,
+    opacity: 0.6,
   },
-  buttonLabelActive: {
-    color: LABEL_ACTIVE,
-  },
-  buttonLabelDisabled: {
-    color: LABEL_DISABLED,
-  },
-  buttonLabelPressed: {
+  subLabelActive: {
+    color: colors.light.cassetteBeige,
     opacity: 0.8,
   },
-  activeLed: {
+  subLabelDisabled: {
+    color: colors.light.border,
+  },
+
+  led: {
     position: "absolute",
-    top: 3,
-    right: 4,
+    top: 4,
+    right: 5,
     width: 5,
     height: 5,
-    borderRadius: 2.5,
-    backgroundColor: "#00ff88",
-    shadowColor: "#00ff88",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 4,
+    borderRadius: 3,
+    backgroundColor: colors.light.cassetteBeige,
+    opacity: 0.9,
   },
 });
