@@ -160,6 +160,10 @@ function SidePanel({
         const isActive = isCurrentItem;
 
         if (item.type === "noise") {
+          const isLastItem = itemIdx === items.length - 1;
+          const fillMs = isLastItem
+            ? MAX_SIDE_MS - (used - item.duration)
+            : null;
           return (
             <TouchableOpacity
               key={item.id}
@@ -171,13 +175,24 @@ function SidePanel({
                 <Text style={styles.noiseIconChar}>≈</Text>
               </View>
               <View style={styles.noiseInfo}>
-                <Text style={styles.noiseLabel}>TAPE NOISE</Text>
-                <Text style={styles.noiseDur}>{(item.duration / 1000).toFixed(1)}s</Text>
+                <Text style={styles.noiseLabel}>
+                  {isLastItem ? "TAPE FILL" : "TAPE NOISE"}
+                </Text>
+                {isLastItem ? (
+                  <Text style={[styles.noiseDur, styles.noiseFillDur]}>
+                    {formatMs(fillMs!)}
+                    <Text style={styles.noiseFillHint}> (to end)</Text>
+                  </Text>
+                ) : (
+                  <Text style={styles.noiseDur}>{(item.duration / 1000).toFixed(1)}s</Text>
+                )}
               </View>
-              <View style={styles.editHint}>
-                <Text style={styles.editHintText}>edit</Text>
-                <Icon name="info" size={11} color={colors.light.mutedForeground} />
-              </View>
+              {!isLastItem && (
+                <View style={styles.editHint}>
+                  <Text style={styles.editHintText}>edit</Text>
+                  <Icon name="info" size={11} color={colors.light.mutedForeground} />
+                </View>
+              )}
             </TouchableOpacity>
           );
         } else {
@@ -421,6 +436,14 @@ const styles = StyleSheet.create({
   noiseDur: {
     color: colors.light.cassetteCream, fontSize: 14,
     fontFamily: "Inter_600SemiBold", marginTop: 1,
+  },
+  noiseFillDur: {
+    color: colors.light.cassetteBeige, fontSize: 15,
+    fontFamily: "Inter_700Bold",
+  },
+  noiseFillHint: {
+    color: colors.light.mutedForeground, fontSize: 11,
+    fontFamily: "Inter_400Regular", fontStyle: "italic",
   },
   editHint: { flexDirection: "row", alignItems: "center", gap: 4 },
   editHintText: {
