@@ -17,9 +17,9 @@ interface CassetteTapeProps {
   width?: number;
 }
 
-const MAX_SPOOL_R = 33;
-const MIN_SPOOL_R = 11;
-const SPOOL_BOX = 86;
+const MAX_SPOOL_R = 40;
+const MIN_SPOOL_R = 9;
+const SPOOL_BOX = 90;
 
 export function CassetteTape({
   isPlaying, isTransitioning, progress, side, title, tracks, width = 340,
@@ -33,10 +33,10 @@ export function CassetteTape({
   const leftRadius = MIN_SPOOL_R + (1 - progress) * (MAX_SPOOL_R - MIN_SPOOL_R);
   const rightRadius = MIN_SPOOL_R + progress * (MAX_SPOOL_R - MIN_SPOOL_R);
 
-  const leftSpoolCX = 130 * s;
-  const leftSpoolCY = 66 * s;
-  const rightSpoolCX = 210 * s;
-  const rightSpoolCY = 66 * s;
+  const leftSpoolCX = 107 * s;
+  const leftSpoolCY = 53 * s;
+  const rightSpoolCX = 233 * s;
+  const rightSpoolCY = 53 * s;
 
   const winX = 56 * s, winY = 11 * s;
   const winW = 228 * s, winH = 100 * s;
