@@ -1,12 +1,11 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import colors from "@/constants/colors";
 
+const TAPE_MS = 30 * 60 * 1000;
+
 interface ProgressBarProps {
-  position: number;
-  duration: number;
-  progress: number;
-  onSeek?: (progress: number) => void;
+  tapePosition: number;
 }
 
 function formatTime(ms: number): string {
@@ -16,18 +15,25 @@ function formatTime(ms: number): string {
   return `${min}:${sec.toString().padStart(2, "0")}`;
 }
 
-export function ProgressBar({ position, duration, progress }: ProgressBarProps) {
+export function ProgressBar({ tapePosition }: ProgressBarProps) {
+  const clamped = Math.max(0, Math.min(tapePosition, TAPE_MS));
+  const progress = clamped / TAPE_MS;
+  const remaining = TAPE_MS - clamped;
+
   return (
     <View style={styles.container}>
       <View style={styles.track}>
         <View style={[styles.fill, { width: `${progress * 100}%` }]} />
         <View
-          style={[styles.thumb, { left: `${Math.max(0, Math.min(progress * 100 - 1.5, 98.5))}%` }]}
+          style={[
+            styles.thumb,
+            { left: `${Math.max(0, Math.min(progress * 100 - 1.5, 98.5))}%` },
+          ]}
         />
       </View>
       <View style={styles.times}>
-        <Text style={styles.time}>{formatTime(position)}</Text>
-        <Text style={styles.time}>{formatTime(duration)}</Text>
+        <Text style={styles.time}>{formatTime(clamped)}</Text>
+        <Text style={[styles.time, styles.remaining]}>-{formatTime(remaining)}</Text>
       </View>
     </View>
   );
@@ -69,5 +75,8 @@ const styles = StyleSheet.create({
     color: colors.light.mutedForeground,
     fontFamily: "Inter_400Regular",
     letterSpacing: 0.5,
+  },
+  remaining: {
+    color: colors.light.cassetteBeige,
   },
 });

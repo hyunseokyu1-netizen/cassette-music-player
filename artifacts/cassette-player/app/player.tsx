@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, Platform,
 } from "react-native";
@@ -20,9 +20,9 @@ export default function PlayerScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const {
-    sideA, sideB, currentSide, currentTrack,
-    isPlaying, isLoading, isPlayingNoise, progress, position, duration,
-    togglePlayPause, playNext, playPrevious, seekForward, seekBackward, flipSide,
+    sideA, sideB, currentSide, currentTrack, currentItemIdx,
+    isPlaying, isLoading, isPlayingNoise, position,
+    togglePlayPause, seekForward, seekBackward, flipSide,
   } = useAudioPlayerContext();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -43,10 +43,19 @@ export default function PlayerScreen() {
 
   const sideATracks = sideA.filter((it): it is TrackItem => it.type === "track");
   const sideBTracks = sideB.filter((it): it is TrackItem => it.type === "track");
+  const activeItems = currentSide === "A" ? sideA : sideB;
   const activeTracks = currentSide === "A" ? sideATracks : sideBTracks;
   const hasTracks = activeTracks.length > 0;
   const trackTitles = activeTracks.map((t) => t.title);
   const sideColor = currentSide === "A" ? "#c0524a" : "#4a80c0";
+
+  const tapePosition = useMemo(() => {
+    if (currentItemIdx < 0) return 0;
+    const beforeMs = activeItems
+      .slice(0, currentItemIdx)
+      .reduce((s, it) => s + it.duration, 0);
+    return beforeMs + position;
+  }, [activeItems, currentItemIdx, position]);
 
   return (
     <View style={[styles.container, { paddingTop: topPad, paddingBottom: bottomPad }]}>
@@ -68,7 +77,7 @@ export default function PlayerScreen() {
           <CassetteTape
             isPlaying={isPlaying}
             isTransitioning={isPlayingNoise}
-            progress={progress}
+            progress={tapePosition / (30 * 60 * 1000)}
             side={currentSide}
             title={currentTrack?.title ?? ""}
             tracks={trackTitles}
@@ -100,7 +109,7 @@ export default function PlayerScreen() {
         </View>
       </View>
 
-      <ProgressBar position={position} duration={duration} progress={progress} />
+      <ProgressBar tapePosition={tapePosition} />
 
       <View style={styles.controls}>
         <ControlButtons
@@ -108,8 +117,6 @@ export default function PlayerScreen() {
           isLoading={isLoading}
           hasTracks={hasTracks}
           onPlayPause={togglePlayPause}
-          onNext={playNext}
-          onPrevious={playPrevious}
           onFastForward={seekForward}
           onRewind={seekBackward}
         />

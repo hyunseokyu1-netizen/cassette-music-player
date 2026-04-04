@@ -11,23 +11,16 @@ interface ControlButtonsProps {
   isLoading: boolean;
   hasTracks: boolean;
   onPlayPause: () => void;
-  onNext: () => void;
-  onPrevious: () => void;
   onFastForward: () => void;
   onRewind: () => void;
 }
 
 export function ControlButtons({
   isPlaying, isLoading, hasTracks,
-  onPlayPause, onNext, onPrevious, onFastForward, onRewind,
+  onPlayPause, onFastForward, onRewind,
 }: ControlButtonsProps) {
   const ffRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rwRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const tap = (fn: () => void) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    fn();
-  };
 
   const startFF = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -49,15 +42,6 @@ export function ControlButtons({
   return (
     <View style={styles.container}>
       <View style={styles.row}>
-        <TouchableOpacity
-          style={[styles.btn, styles.small]}
-          onPress={() => tap(onPrevious)}
-          disabled={!hasTracks}
-          activeOpacity={0.7}
-        >
-          <Icon name="skip-back" size={19} color={iconColor(hasTracks)} />
-        </TouchableOpacity>
-
         <TouchableOpacity
           style={[styles.btn, styles.small]}
           onPressIn={startRW} onPressOut={stopRW}
@@ -85,14 +69,6 @@ export function ControlButtons({
         >
           <Icon name="fast-forward" size={19} color={iconColor(hasTracks)} />
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.btn, styles.small]}
-          onPress={() => tap(onNext)}
-          disabled={!hasTracks} activeOpacity={0.7}
-        >
-          <Icon name="skip-forward" size={19} color={iconColor(hasTracks)} />
-        </TouchableOpacity>
       </View>
     </View>
   );
@@ -100,15 +76,15 @@ export function ControlButtons({
 
 const styles = StyleSheet.create({
   container: { alignItems: "center", paddingHorizontal: 16 },
-  row: { flexDirection: "row", alignItems: "center", gap: 12 },
+  row: { flexDirection: "row", alignItems: "center", gap: 20 },
   btn: { alignItems: "center", justifyContent: "center", borderRadius: 50 },
   small: {
-    width: 50, height: 50,
+    width: 54, height: 54,
     backgroundColor: colors.light.secondary,
     borderWidth: 1, borderColor: colors.light.border,
   },
   play: {
-    width: 68, height: 68,
+    width: 72, height: 72,
     backgroundColor: colors.light.cassetteBeige,
     borderWidth: 2, borderColor: colors.light.cassetteLabelBorder,
     elevation: 6,
