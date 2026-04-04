@@ -6,31 +6,43 @@ import { Alert } from "react-native";
 
 export type Side = "A" | "B";
 
-export interface Track {
+export interface TrackItem {
   id: string;
+  type: "track";
   title: string;
   duration: number;
   uri: string;
-  filename: string;
 }
 
-const KEY_A = "@cassette_sideA_v3";
-const KEY_B = "@cassette_sideB_v3";
-const KEY_SIDE = "@cassette_currentSide_v3";
+export interface NoiseItem {
+  id: string;
+  type: "noise";
+  duration: number;
+}
+
+export type SideItem = TrackItem | NoiseItem;
 
 export const MAX_SIDE_MS = 30 * 60 * 1000;
+export const DEFAULT_NOISE_MS = 2000;
 const NOISE_CHUNK_MS = 2200;
 
-function makeId(uri: string) {
-  return uri.replace(/[^a-zA-Z0-9]/g, "").slice(-32);
+const KEY_A = "@cassette_items_A_v1";
+const KEY_B = "@cassette_items_B_v1";
+const KEY_SIDE = "@cassette_side_v1";
+
+function genId(prefix: string) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+}
+function trackId(uri: string) {
+  return `track_${uri.replace(/[^a-zA-Z0-9]/g, "").slice(-24)}`;
+}
+function totalMs(items: SideItem[]) {
+  return items.reduce((s, i) => s + i.duration, 0);
 }
 
-async function loadDuration(uri: string): Promise<number> {
+async function loadFileDuration(uri: string): Promise<number> {
   try {
-    const { sound, status } = await Audio.Sound.createAsync(
-      { uri },
-      { shouldPlay: false }
-    );
+    const { sound, status } = await Audio.Sound.createAsync({ uri }, { shouldPlay: false });
     let dur = 0;
     if (status.isLoaded && status.durationMillis) {
       dur = status.durationMillis;
@@ -46,421 +58,422 @@ async function loadDuration(uri: string): Promise<number> {
   }
 }
 
-function totalMs(tracks: Track[]): number {
-  return tracks.reduce((s, t) => s + t.duration, 0);
-}
-
-interface State {
-  sideA: Track[];
-  sideB: Track[];
+export interface UseAudioPlayerReturn {
+  sideA: SideItem[];
+  sideB: SideItem[];
   currentSide: Side;
-  currentIndex: number;
-  currentTrack: Track | null;
+  currentItemIdx: number;
+  currentTrack: TrackItem | null;
   isPlaying: boolean;
+  isPlayingNoise: boolean;
   isLoading: boolean;
-  isTransitioning: boolean;
   isAdding: boolean;
   position: number;
   duration: number;
   progress: number;
-}
-
-interface Actions {
   togglePlayPause: () => Promise<void>;
   playNext: () => Promise<void>;
   playPrevious: () => Promise<void>;
-  playTrack: (index: number) => Promise<void>;
+  playItemAt: (idx: number) => Promise<void>;
   seekTo: (ms: number) => Promise<void>;
   seekForward: (s?: number) => Promise<void>;
   seekBackward: (s?: number) => Promise<void>;
   flipSide: () => Promise<void>;
   addToSide: (side: Side) => Promise<void>;
-  removeFromSide: (side: Side, index: number) => void;
+  removeTrackItem: (side: Side, trackId: string) => void;
+  updateNoiseDuration: (side: Side, noiseId: string, ms: number) => void;
   setSide: (side: Side) => void;
 }
 
-export type UseAudioPlayerReturn = State & Actions;
-
 export function useAudioPlayer(): UseAudioPlayerReturn {
-  const [sideA, setSideA] = useState<Track[]>([]);
-  const [sideB, setSideB] = useState<Track[]>([]);
+  const [sideA, setSideA] = useState<SideItem[]>([]);
+  const [sideB, setSideB] = useState<SideItem[]>([]);
   const [currentSide, setCurrentSide] = useState<Side>("A");
-  const [currentIndex, setCurrentIndex] = useState<number>(-1);
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isTransitioning, setIsTransitioning] = useState<boolean>(false);
-  const [isAdding, setIsAdding] = useState<boolean>(false);
-  const [position, setPosition] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(0);
+  const [currentItemIdx, setCurrentItemIdx] = useState(-1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPlayingNoise, setIsPlayingNoise] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
 
   const soundRef = useRef<Audio.Sound | null>(null);
   const noiseRef = useRef<Audio.Sound | null>(null);
-  const currentIndexRef = useRef<number>(-1);
-  const currentSideRef = useRef<Side>("A");
-  const sideARef = useRef<Track[]>([]);
-  const sideBRef = useRef<Track[]>([]);
-  const transitioningRef = useRef<boolean>(false);
-  const fillCancelRef = useRef<boolean>(false);
+  const itemIdxRef = useRef(-1);
+  const sideRef = useRef<Side>("A");
+  const sideARef = useRef<SideItem[]>([]);
+  const sideBRef = useRef<SideItem[]>([]);
+  const cancelRef = useRef(false);
 
-  useEffect(() => { currentIndexRef.current = currentIndex; }, [currentIndex]);
-  useEffect(() => { currentSideRef.current = currentSide; }, [currentSide]);
+  useEffect(() => { itemIdxRef.current = currentItemIdx; }, [currentItemIdx]);
+  useEffect(() => { sideRef.current = currentSide; }, [currentSide]);
   useEffect(() => { sideARef.current = sideA; }, [sideA]);
   useEffect(() => { sideBRef.current = sideB; }, [sideB]);
-  useEffect(() => { transitioningRef.current = isTransitioning; }, [isTransitioning]);
+
+  const getItems = useCallback((side: Side): SideItem[] =>
+    side === "A" ? sideARef.current : sideBRef.current, []);
+
+  const saveItems = useCallback((side: Side, items: SideItem[]) => {
+    if (side === "A") { setSideA(items); AsyncStorage.setItem(KEY_A, JSON.stringify(items)); }
+    else { setSideB(items); AsyncStorage.setItem(KEY_B, JSON.stringify(items)); }
+  }, []);
 
   useEffect(() => {
     Audio.setAudioModeAsync({
-      allowsRecordingIOS: false,
-      staysActiveInBackground: true,
-      playsInSilentModeIOS: true,
-      shouldDuckAndroid: true,
-      playThroughEarpieceAndroid: false,
+      allowsRecordingIOS: false, staysActiveInBackground: true,
+      playsInSilentModeIOS: true, shouldDuckAndroid: true, playThroughEarpieceAndroid: false,
     });
     (async () => {
       const [a, b, side] = await Promise.all([
-        AsyncStorage.getItem(KEY_A),
-        AsyncStorage.getItem(KEY_B),
-        AsyncStorage.getItem(KEY_SIDE),
+        AsyncStorage.getItem(KEY_A), AsyncStorage.getItem(KEY_B), AsyncStorage.getItem(KEY_SIDE),
       ]);
       if (a) setSideA(JSON.parse(a));
       if (b) setSideB(JSON.parse(b));
-      if (side === "A" || side === "B") setCurrentSide(side);
+      if (side === "A" || side === "B") setCurrentSide(side as Side);
     })();
-    return () => {
-      soundRef.current?.unloadAsync();
-      noiseRef.current?.unloadAsync();
-    };
+    return () => { soundRef.current?.unloadAsync(); noiseRef.current?.unloadAsync(); };
   }, []);
 
-  const getTracks = useCallback(
-    (side: Side) => (side === "A" ? sideARef.current : sideBRef.current),
-    []
-  );
+  const stopTrack = async () => {
+    if (soundRef.current) {
+      try { await soundRef.current.stopAsync(); await soundRef.current.unloadAsync(); } catch {}
+      soundRef.current = null;
+    }
+  };
 
-  const playTapeNoise = useCallback(async (maxMs = NOISE_CHUNK_MS) => {
-    const ms = Math.min(maxMs, NOISE_CHUNK_MS);
+  const stopNoise = async () => {
+    if (noiseRef.current) {
+      try { await noiseRef.current.stopAsync(); await noiseRef.current.unloadAsync(); } catch {}
+      noiseRef.current = null;
+    }
+  };
+
+  const cancelAll = useCallback(async () => {
+    cancelRef.current = true;
+    await Promise.all([stopTrack(), stopNoise()]);
+    setIsPlaying(false);
+    setIsPlayingNoise(false);
+    setPosition(0);
+    setDuration(0);
+  }, []);
+
+  const playNoiseChunk = async (ms: number) => {
+    const actual = Math.min(ms, NOISE_CHUNK_MS);
     try {
-      if (noiseRef.current) {
-        await noiseRef.current.stopAsync().catch(() => {});
-        await noiseRef.current.unloadAsync().catch(() => {});
-        noiseRef.current = null;
-      }
+      await stopNoise();
       const { sound } = await Audio.Sound.createAsync(
         require("../assets/sounds/tape-noise.wav"),
         { shouldPlay: true, volume: 0.45 }
       );
       noiseRef.current = sound;
-      await new Promise<void>((r) => setTimeout(r, ms));
+      await new Promise<void>((r) => setTimeout(r, actual));
       await sound.stopAsync().catch(() => {});
       await sound.unloadAsync().catch(() => {});
       noiseRef.current = null;
     } catch {
-      await new Promise<void>((r) => setTimeout(r, ms));
+      await new Promise<void>((r) => setTimeout(r, actual));
     }
-  }, []);
+  };
 
-  const startFillRef = useRef<((remainingMs: number) => Promise<void>) | null>(null);
+  const playNoiseDuration = async (durationMs: number): Promise<boolean> => {
+    let left = durationMs;
+    while (left > 0 && !cancelRef.current) {
+      await playNoiseChunk(Math.min(left, NOISE_CHUNK_MS));
+      left -= NOISE_CHUNK_MS;
+    }
+    return !cancelRef.current;
+  };
 
-  const startFill = useCallback(async (remainingMs: number) => {
-    if (remainingMs <= 0) {
-      setIsPlaying(false);
-      setCurrentIndex(-1);
-      currentIndexRef.current = -1;
+  const playItemAtRef = useRef<((idx: number) => Promise<void>) | null>(null);
+
+  const advance = useCallback(() => {
+    if (cancelRef.current) return;
+    const items = getItems(sideRef.current);
+    const next = itemIdxRef.current + 1;
+    if (next >= items.length) {
+      const used = totalMs(items);
+      const fillMs = MAX_SIDE_MS - used;
+      if (fillMs > 1000) {
+        setCurrentItemIdx(-1);
+        itemIdxRef.current = -1;
+        setIsPlayingNoise(true);
+        setIsPlaying(true);
+        playNoiseDuration(fillMs).then((done) => {
+          setIsPlayingNoise(false);
+          if (done) {
+            setIsPlaying(false);
+            setCurrentItemIdx(-1);
+            itemIdxRef.current = -1;
+          }
+        });
+      } else {
+        setIsPlaying(false);
+        setIsPlayingNoise(false);
+        setCurrentItemIdx(-1);
+        itemIdxRef.current = -1;
+      }
       return;
     }
-    fillCancelRef.current = false;
-    setIsTransitioning(true);
-    transitioningRef.current = true;
-    let left = remainingMs;
-    while (left > 0 && !fillCancelRef.current) {
-      const chunk = Math.min(left, NOISE_CHUNK_MS);
-      await playTapeNoise(chunk);
-      left -= chunk;
-    }
-    if (!fillCancelRef.current) {
-      setIsTransitioning(false);
-      transitioningRef.current = false;
-      setIsPlaying(false);
-      setCurrentIndex(-1);
-      currentIndexRef.current = -1;
-    }
-  }, [playTapeNoise]);
-
-  useEffect(() => { startFillRef.current = startFill; }, [startFill]);
-
-  const cancelFill = useCallback(() => {
-    fillCancelRef.current = true;
-  }, []);
-
-  const stopCurrent = useCallback(async () => {
-    cancelFill();
-    if (soundRef.current) {
-      try {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-      } catch {}
-      soundRef.current = null;
-    }
-    setIsPlaying(false);
-    setPosition(0);
-    setDuration(0);
-    setIsTransitioning(false);
-    transitioningRef.current = false;
-  }, [cancelFill]);
+    playItemAtRef.current?.(next);
+  }, [getItems]);
 
   const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
     if (!status.isLoaded) return;
     setPosition(status.positionMillis);
     setDuration(status.durationMillis ?? 0);
     setIsPlaying(status.isPlaying);
+    if (status.didJustFinish && !cancelRef.current) advance();
+  }, [advance]);
 
-    if (status.didJustFinish && !transitioningRef.current) {
-      const tracks = getTracks(currentSideRef.current);
-      const nextIdx = currentIndexRef.current + 1;
+  const playItemAt = useCallback(async (idx: number) => {
+    if (cancelRef.current) return;
+    const items = getItems(sideRef.current);
+    if (idx < 0 || idx >= items.length) return;
+    const item = items[idx];
+    setCurrentItemIdx(idx);
+    itemIdxRef.current = idx;
 
-      if (nextIdx < tracks.length) {
-        setIsTransitioning(true);
-        transitioningRef.current = true;
-        playTapeNoise().then(() => {
-          setIsTransitioning(false);
-          transitioningRef.current = false;
-          loadAndPlayRef.current?.(nextIdx, currentSideRef.current);
-        });
-      } else {
-        const sideTotalMs = totalMs(tracks);
-        const fillMs = MAX_SIDE_MS - sideTotalMs;
-        setIsPlaying(false);
-        startFillRef.current?.(fillMs);
-      }
-    }
-  }, [getTracks, playTapeNoise]);
-
-  const loadAndPlayRef = useRef<((index: number, side: Side) => Promise<void>) | null>(null);
-
-  const loadAndPlay = useCallback(async (index: number, side: Side) => {
-    const tracks = getTracks(side);
-    if (index < 0 || index >= tracks.length) return;
-    const track = tracks[index];
-    setIsLoading(true);
-    setCurrentIndex(index);
-    currentIndexRef.current = index;
-    setCurrentSide(side);
-    setPosition(0);
-    setDuration(0);
-    try {
-      if (soundRef.current) {
-        await soundRef.current.stopAsync();
-        await soundRef.current.unloadAsync();
-        soundRef.current = null;
-      }
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: track.uri },
-        { shouldPlay: true },
-        onPlaybackStatusUpdate
-      );
-      soundRef.current = sound;
+    if (item.type === "noise") {
+      setIsPlayingNoise(true);
       setIsPlaying(true);
-    } catch (err) {
-      console.warn("loadAndPlay error", err);
+      setPosition(0);
+      setDuration(item.duration);
+      const done = await playNoiseDuration(item.duration);
+      setIsPlayingNoise(false);
+      if (done) advance();
+    } else {
+      setIsPlayingNoise(false);
+      setIsLoading(true);
+      setPosition(0);
+      setDuration(0);
+      try {
+        await stopTrack();
+        const { sound } = await Audio.Sound.createAsync(
+          { uri: item.uri },
+          { shouldPlay: true },
+          onPlaybackStatusUpdate
+        );
+        soundRef.current = sound;
+        setIsPlaying(true);
+      } catch (err) {
+        console.warn("playItemAt error:", err);
+        if (!cancelRef.current) advance();
+      }
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  }, [getTracks, onPlaybackStatusUpdate]);
+  }, [getItems, advance, onPlaybackStatusUpdate]);
 
-  useEffect(() => { loadAndPlayRef.current = loadAndPlay; }, [loadAndPlay]);
+  useEffect(() => { playItemAtRef.current = playItemAt; }, [playItemAt]);
 
   const togglePlayPause = useCallback(async () => {
-    if (isTransitioning) {
-      cancelFill();
-      setIsTransitioning(false);
-      transitioningRef.current = false;
+    if (isPlayingNoise) {
+      cancelRef.current = true;
+      await stopNoise();
+      setIsPlayingNoise(false);
+      setIsPlaying(false);
       return;
     }
     if (isPlaying) {
       await soundRef.current?.pauseAsync();
       setIsPlaying(false);
     } else if (soundRef.current) {
+      cancelRef.current = false;
       await soundRef.current.playAsync();
       setIsPlaying(true);
     } else {
-      const tracks = getTracks(currentSideRef.current);
-      if (tracks.length > 0) await loadAndPlay(0, currentSideRef.current);
+      const items = getItems(sideRef.current);
+      if (!items.length) return;
+      cancelRef.current = false;
+      await playItemAtRef.current?.(0);
     }
-  }, [isPlaying, isTransitioning, cancelFill, getTracks, loadAndPlay]);
+  }, [isPlaying, isPlayingNoise, getItems]);
+
+  const findNextTrack = (items: SideItem[], from: number) => {
+    for (let i = from + 1; i < items.length; i++)
+      if (items[i].type === "track") return i;
+    return -1;
+  };
+  const findPrevTrack = (items: SideItem[], from: number) => {
+    for (let i = from - 1; i >= 0; i--)
+      if (items[i].type === "track") return i;
+    return -1;
+  };
 
   const playNext = useCallback(async () => {
-    if (isTransitioning) return;
-    const tracks = getTracks(currentSideRef.current);
-    const next = currentIndexRef.current + 1;
-    if (next >= tracks.length) return;
-    await stopCurrent();
-    setIsTransitioning(true);
-    transitioningRef.current = true;
-    await playTapeNoise();
-    setIsTransitioning(false);
-    transitioningRef.current = false;
-    await loadAndPlay(next, currentSideRef.current);
-  }, [isTransitioning, getTracks, stopCurrent, playTapeNoise, loadAndPlay]);
+    const items = getItems(sideRef.current);
+    const nextTrackIdx = findNextTrack(items, itemIdxRef.current);
+    if (nextTrackIdx === -1) return;
+    const startIdx =
+      nextTrackIdx > 0 && items[nextTrackIdx - 1].type === "noise"
+        ? nextTrackIdx - 1
+        : nextTrackIdx;
+    await cancelAll();
+    cancelRef.current = false;
+    await playItemAtRef.current?.(startIdx);
+  }, [getItems, cancelAll]);
 
   const playPrevious = useCallback(async () => {
-    if (isTransitioning) return;
-    if (position > 3000) {
-      await soundRef.current?.setPositionAsync(0);
+    if (position > 3000 && soundRef.current) {
+      await soundRef.current.setPositionAsync(0);
       return;
     }
-    const prev = currentIndexRef.current - 1;
-    if (prev < 0) return;
-    await stopCurrent();
-    await loadAndPlay(prev, currentSideRef.current);
-  }, [isTransitioning, position, stopCurrent, loadAndPlay]);
-
-  const playTrack = useCallback(async (index: number) => {
-    if (isTransitioning) return;
-    await stopCurrent();
-    await loadAndPlay(index, currentSideRef.current);
-  }, [isTransitioning, stopCurrent, loadAndPlay]);
+    const items = getItems(sideRef.current);
+    const cur = itemIdxRef.current;
+    const curItem = items[cur];
+    const fromIdx = !curItem || curItem.type === "noise"
+      ? findPrevTrack(items, cur)
+      : findPrevTrack(items, cur);
+    if (fromIdx === -1) return;
+    const startIdx =
+      fromIdx > 0 && items[fromIdx - 1].type === "noise"
+        ? fromIdx - 1
+        : fromIdx;
+    await cancelAll();
+    cancelRef.current = false;
+    await playItemAtRef.current?.(startIdx);
+  }, [position, getItems, cancelAll]);
 
   const seekTo = useCallback(async (ms: number) => {
     await soundRef.current?.setPositionAsync(ms);
   }, []);
-
   const seekForward = useCallback(async (s = 10) => {
-    const newPos = Math.min(position + s * 1000, duration);
-    await soundRef.current?.setPositionAsync(newPos);
+    await soundRef.current?.setPositionAsync(Math.min(position + s * 1000, duration));
   }, [position, duration]);
-
   const seekBackward = useCallback(async (s = 10) => {
-    const newPos = Math.max(0, position - s * 1000);
-    await soundRef.current?.setPositionAsync(newPos);
+    await soundRef.current?.setPositionAsync(Math.max(0, position - s * 1000));
   }, [position]);
 
   const flipSide = useCallback(async () => {
-    await stopCurrent();
-    setIsTransitioning(true);
-    transitioningRef.current = true;
-    await playTapeNoise();
-    setIsTransitioning(false);
-    transitioningRef.current = false;
-    const newSide: Side = currentSideRef.current === "A" ? "B" : "A";
+    await cancelAll();
+    cancelRef.current = false;
+    setIsPlayingNoise(true);
+    setIsPlaying(true);
+    const done = await playNoiseDuration(DEFAULT_NOISE_MS);
+    setIsPlayingNoise(false);
+    if (!done) return;
+    const newSide: Side = sideRef.current === "A" ? "B" : "A";
     setCurrentSide(newSide);
-    currentSideRef.current = newSide;
+    sideRef.current = newSide;
     AsyncStorage.setItem(KEY_SIDE, newSide);
-    setCurrentIndex(-1);
-    currentIndexRef.current = -1;
-    const newTracks = getTracks(newSide);
-    if (newTracks.length > 0) await loadAndPlay(0, newSide);
-  }, [stopCurrent, playTapeNoise, getTracks, loadAndPlay]);
+    setCurrentItemIdx(-1);
+    itemIdxRef.current = -1;
+    const newItems = getItems(newSide);
+    if (newItems.length > 0) { cancelRef.current = false; await playItemAtRef.current?.(0); }
+  }, [cancelAll, getItems]);
 
   const setSide = useCallback((side: Side) => {
-    cancelFill();
+    cancelRef.current = true;
     setCurrentSide(side);
-    currentSideRef.current = side;
-    setCurrentIndex(-1);
-    currentIndexRef.current = -1;
+    sideRef.current = side;
+    setCurrentItemIdx(-1);
+    itemIdxRef.current = -1;
     AsyncStorage.setItem(KEY_SIDE, side);
-  }, [cancelFill]);
+  }, []);
 
   const addToSide = useCallback(async (side: Side) => {
-    const existing = getTracks(side);
-    const existingMs = totalMs(existing);
-    const remainingMs = MAX_SIDE_MS - existingMs;
-    if (remainingMs <= 0) {
-      Alert.alert("Side " + side + " is full", "This side has reached the 30-minute limit.");
+    const existing = getItems(side);
+    const usedMs = totalMs(existing);
+    if (usedMs >= MAX_SIDE_MS) {
+      Alert.alert("Tape Full", `Side ${side} has already reached the 30-minute limit.`);
       return;
     }
-
     setIsAdding(true);
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: "audio/*",
-        multiple: true,
-        copyToCacheDirectory: false,
+        type: "audio/*", multiple: true, copyToCacheDirectory: false,
       });
-
-      if (result.canceled) {
-        setIsAdding(false);
-        return;
-      }
-
-      const assets = result.assets.filter(
-        (a) => !existing.find((e) => e.id === makeId(a.uri))
-      );
-
-      const withDurations = await Promise.all(
-        assets.map(async (a) => {
-          const dur = await loadDuration(a.uri);
-          return {
-            id: makeId(a.uri),
+      if (!result.canceled) {
+        const withDur = await Promise.all(
+          result.assets.map(async (a) => ({
+            id: trackId(a.uri),
+            type: "track" as const,
             title: (a.name ?? a.uri.split("/").pop() ?? "Unknown").replace(/\.[^/.]+$/, ""),
-            duration: dur,
+            duration: await loadFileDuration(a.uri),
             uri: a.uri,
-            filename: a.name ?? "",
-          } as Track;
-        })
-      );
-
-      const toAdd: Track[] = [];
-      let running = existingMs;
-      let skipped = 0;
-
-      for (const track of withDurations) {
-        if (running + track.duration <= MAX_SIDE_MS) {
-          toAdd.push(track);
-          running += track.duration;
-        } else {
-          skipped++;
-        }
-      }
-
-      if (skipped > 0) {
-        Alert.alert(
-          "Time Limit Reached",
-          `${skipped} track${skipped > 1 ? "s were" : " was"} not added because Side ${side} would exceed 30 minutes.`
+          }))
         );
-      }
 
-      if (toAdd.length > 0) {
-        const merged = [...existing, ...toAdd];
-        if (side === "A") {
-          setSideA(merged);
-          AsyncStorage.setItem(KEY_A, JSON.stringify(merged));
-        } else {
-          setSideB(merged);
-          AsyncStorage.setItem(KEY_B, JSON.stringify(merged));
+        let items = [...existing];
+        let runningMs = usedMs;
+        let skipped = 0;
+
+        for (const track of withDur) {
+          if (items.find((it) => it.id === track.id)) continue;
+          const isEmpty = items.length === 0;
+          const addMs = track.duration + DEFAULT_NOISE_MS + (isEmpty ? DEFAULT_NOISE_MS : 0);
+          if (runningMs + addMs > MAX_SIDE_MS) {
+            skipped++;
+            continue;
+          }
+          if (isEmpty) {
+            items.push({ id: genId("n"), type: "noise", duration: DEFAULT_NOISE_MS });
+            items.push(track);
+            items.push({ id: genId("n"), type: "noise", duration: DEFAULT_NOISE_MS });
+          } else {
+            items.push(track);
+            items.push({ id: genId("n"), type: "noise", duration: DEFAULT_NOISE_MS });
+          }
+          runningMs += addMs;
         }
+
+        if (skipped > 0) {
+          Alert.alert(
+            "Time Limit Reached",
+            `${skipped} track${skipped > 1 ? "s were" : " was"} not added — Side ${side} would exceed 30 minutes.`
+          );
+        }
+        if (items.length !== existing.length) saveItems(side, items);
       }
     } catch (err) {
-      console.warn("addToSide error", err);
+      console.warn("addToSide error:", err);
     }
     setIsAdding(false);
-  }, [getTracks]);
+  }, [getItems, saveItems]);
 
-  const removeFromSide = useCallback((side: Side, index: number) => {
-    const existing = getTracks(side);
-    const updated = existing.filter((_, i) => i !== index);
-    if (side === "A") {
-      setSideA(updated);
-      AsyncStorage.setItem(KEY_A, JSON.stringify(updated));
-    } else {
-      setSideB(updated);
-      AsyncStorage.setItem(KEY_B, JSON.stringify(updated));
+  const removeTrackItem = useCallback((side: Side, tId: string) => {
+    const items = getItems(side);
+    const idx = items.findIndex((it) => it.id === tId);
+    if (idx === -1) return;
+    const updated = [...items];
+    const removeFrom = idx > 0 && updated[idx - 1].type === "noise" ? idx - 1 : idx;
+    updated.splice(removeFrom, removeFrom < idx ? 2 : 1);
+    const hasTrack = updated.some((it) => it.type === "track");
+    saveItems(side, hasTrack ? updated : []);
+    if (sideRef.current === side && itemIdxRef.current >= removeFrom) {
+      cancelRef.current = true;
+      stopTrack();
+      setIsPlaying(false);
+      setIsPlayingNoise(false);
+      setCurrentItemIdx(-1);
+      itemIdxRef.current = -1;
     }
-    if (currentSideRef.current === side && currentIndexRef.current === index) {
-      stopCurrent();
-      setCurrentIndex(-1);
-      currentIndexRef.current = -1;
-    }
-  }, [getTracks, stopCurrent]);
+  }, [getItems, saveItems]);
 
-  const tracks = currentSide === "A" ? sideA : sideB;
-  const currentTrack = currentIndex >= 0 ? tracks[currentIndex] ?? null : null;
+  const updateNoiseDuration = useCallback((side: Side, noiseId: string, ms: number) => {
+    const items = getItems(side);
+    const updated = items.map((it) =>
+      it.id === noiseId && it.type === "noise"
+        ? { ...it, duration: Math.max(200, Math.min(ms, MAX_SIDE_MS)) }
+        : it
+    );
+    if (totalMs(updated) > MAX_SIDE_MS) {
+      Alert.alert("Time Limit", "This noise duration would push the tape over 30 minutes.");
+      return;
+    }
+    saveItems(side, updated);
+  }, [getItems, saveItems]);
+
+  const activeItems = currentSide === "A" ? sideA : sideB;
+  const currentItem = currentItemIdx >= 0 ? activeItems[currentItemIdx] ?? null : null;
+  const currentTrack = currentItem?.type === "track" ? currentItem : null;
   const progress = duration > 0 ? position / duration : 0;
 
   return {
-    sideA, sideB, currentSide, currentIndex, currentTrack,
-    isPlaying, isLoading, isTransitioning, isAdding,
+    sideA, sideB, currentSide, currentItemIdx, currentTrack,
+    isPlaying, isPlayingNoise, isLoading, isAdding,
     position, duration, progress,
-    togglePlayPause, playNext, playPrevious, playTrack,
+    togglePlayPause, playNext, playPrevious, playItemAt,
     seekTo, seekForward, seekBackward,
-    flipSide, addToSide, removeFromSide, setSide,
+    flipSide, addToSide, removeTrackItem, updateNoiseDuration, setSide,
   };
 }

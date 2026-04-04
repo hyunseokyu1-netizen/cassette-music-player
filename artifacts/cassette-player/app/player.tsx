@@ -13,6 +13,7 @@ import { ControlButtons } from "@/components/ControlButtons";
 import { ProgressBar } from "@/components/ProgressBar";
 import { Icon } from "@/components/Icon";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
+import { TrackItem } from "@/hooks/useAudioPlayer";
 import colors from "@/constants/colors";
 
 export default function PlayerScreen() {
@@ -20,8 +21,7 @@ export default function PlayerScreen() {
   const router = useRouter();
   const {
     sideA, sideB, currentSide, currentTrack,
-    isPlaying, isLoading, isTransitioning, progress,
-    position, duration,
+    isPlaying, isLoading, isPlayingNoise, progress, position, duration,
     togglePlayPause, playNext, playPrevious, seekForward, seekBackward, flipSide,
   } = useAudioPlayerContext();
 
@@ -36,16 +36,16 @@ export default function PlayerScreen() {
       withTiming(0, { duration: 180 }),
       withTiming(1, { duration: 180 })
     );
-    setTimeout(() => { flipSide(); }, 180);
+    setTimeout(() => flipSide(), 180);
   }, [flipSide]);
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scaleX: scaleX.value }],
-  }));
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scaleX: scaleX.value }] }));
 
-  const activeTracks = currentSide === "A" ? sideA : sideB;
-  const trackTitles = activeTracks.map((t) => t.title);
+  const sideATracks = sideA.filter((it): it is TrackItem => it.type === "track");
+  const sideBTracks = sideB.filter((it): it is TrackItem => it.type === "track");
+  const activeTracks = currentSide === "A" ? sideATracks : sideBTracks;
   const hasTracks = activeTracks.length > 0;
+  const trackTitles = activeTracks.map((t) => t.title);
   const sideColor = currentSide === "A" ? "#c0524a" : "#4a80c0";
 
   return (
@@ -54,19 +54,12 @@ export default function PlayerScreen() {
         <TouchableOpacity onPress={() => router.push("/library")} style={styles.btn} activeOpacity={0.7}>
           <Icon name="list" size={22} color={colors.light.cassetteBeige} />
         </TouchableOpacity>
-
         <View style={[styles.sidePill, { borderColor: sideColor }]}>
           <Text style={[styles.sidePillText, { color: sideColor }]}>SIDE {currentSide}</Text>
         </View>
-
-        <TouchableOpacity
-          onPress={handleFlip} style={styles.btn} activeOpacity={0.7}
-          disabled={isTransitioning}
-        >
-          <Icon
-            name="refresh-cw" size={20}
-            color={isTransitioning ? colors.light.mutedForeground : colors.light.cassetteBeige}
-          />
+        <TouchableOpacity onPress={handleFlip} style={styles.btn} activeOpacity={0.7} disabled={isPlayingNoise}>
+          <Icon name="refresh-cw" size={20}
+            color={isPlayingNoise ? colors.light.mutedForeground : colors.light.cassetteBeige} />
         </TouchableOpacity>
       </View>
 
@@ -74,7 +67,7 @@ export default function PlayerScreen() {
         <Animated.View style={animStyle}>
           <CassetteTape
             isPlaying={isPlaying}
-            isTransitioning={isTransitioning}
+            isTransitioning={isPlayingNoise}
             progress={progress}
             side={currentSide}
             title={currentTrack?.title ?? ""}
@@ -85,10 +78,10 @@ export default function PlayerScreen() {
       </View>
 
       <View style={styles.trackInfo}>
-        {isTransitioning ? (
-          <View style={styles.transitionRow}>
+        {isPlayingNoise ? (
+          <View style={styles.noiseRow}>
             <View style={styles.dot} />
-            <Text style={styles.transitionText}>TAPE NOISE</Text>
+            <Text style={styles.noiseText}>TAPE NOISE</Text>
             <View style={styles.dot} />
           </View>
         ) : (
@@ -97,22 +90,22 @@ export default function PlayerScreen() {
           </Text>
         )}
         <View style={styles.sideRow}>
-          <Text style={[styles.sideCount, sideA.length > 0 && { color: "#c0524a" }]}>
-            {`A: ${sideA.length}/6`}
+          <Text style={[styles.sideCount, sideATracks.length > 0 && { color: "#c0524a" }]}>
+            {`A: ${sideATracks.length} tracks`}
           </Text>
-          <Text style={styles.sideDivider}>·</Text>
-          <Text style={[styles.sideCount, sideB.length > 0 && { color: "#4a80c0" }]}>
-            {`B: ${sideB.length}/6`}
+          <Text style={styles.sideDot}>·</Text>
+          <Text style={[styles.sideCount, sideBTracks.length > 0 && { color: "#4a80c0" }]}>
+            {`B: ${sideBTracks.length} tracks`}
           </Text>
         </View>
       </View>
 
       <ProgressBar position={position} duration={duration} progress={progress} />
 
-      <View style={styles.controlsContainer}>
+      <View style={styles.controls}>
         <ControlButtons
           isPlaying={isPlaying}
-          isLoading={isLoading || isTransitioning}
+          isLoading={isLoading}
           hasTracks={hasTracks}
           onPlayPause={togglePlayPause}
           onNext={playNext}
@@ -123,10 +116,7 @@ export default function PlayerScreen() {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity
-          onPress={handleFlip} style={styles.flipButton}
-          activeOpacity={0.8} disabled={isTransitioning}
-        >
+        <TouchableOpacity onPress={handleFlip} style={styles.flipBtn} activeOpacity={0.8} disabled={isPlayingNoise}>
           <Icon name="refresh-cw" size={13} color={colors.light.cassetteDark} />
           <Text style={styles.flipText}>FLIP TO SIDE {currentSide === "A" ? "B" : "A"}</Text>
         </TouchableOpacity>
@@ -138,37 +128,30 @@ export default function PlayerScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.light.background },
   header: {
-    flexDirection: "row", alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, paddingVertical: 10,
   },
   btn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
-  sidePill: {
-    borderWidth: 1.5, borderRadius: 20,
-    paddingHorizontal: 16, paddingVertical: 4,
-  },
+  sidePill: { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 4 },
   sidePillText: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 2 },
   cassetteWrapper: { alignItems: "center", paddingVertical: 14, paddingHorizontal: 18 },
   trackInfo: {
-    paddingHorizontal: 28, alignItems: "center",
-    gap: 6, marginBottom: 14, minHeight: 52, justifyContent: "center",
+    paddingHorizontal: 28, alignItems: "center", gap: 6,
+    marginBottom: 14, minHeight: 52, justifyContent: "center",
   },
   trackTitle: {
     color: colors.light.cassetteCream, fontSize: 17,
     fontFamily: "Inter_700Bold", textAlign: "center", letterSpacing: 0.4,
   },
-  transitionRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  transitionText: {
-    color: colors.light.cassetteBeige, fontSize: 12,
-    fontFamily: "Inter_600SemiBold", letterSpacing: 3,
-  },
+  noiseRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  noiseText: { color: colors.light.cassetteBeige, fontSize: 12, fontFamily: "Inter_600SemiBold", letterSpacing: 3 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.light.cassetteBeige, opacity: 0.7 },
   sideRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   sideCount: { fontSize: 11, fontFamily: "Inter_500Medium", color: colors.light.mutedForeground, letterSpacing: 0.5 },
-  sideDivider: { color: colors.light.mutedForeground, fontSize: 12 },
-  controlsContainer: { marginTop: 16, marginBottom: 14 },
+  sideDot: { color: colors.light.mutedForeground, fontSize: 12 },
+  controls: { marginTop: 16, marginBottom: 14 },
   footer: { alignItems: "center" },
-  flipButton: {
+  flipBtn: {
     flexDirection: "row", alignItems: "center", gap: 7,
     backgroundColor: colors.light.cassetteBeige,
     paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20,
