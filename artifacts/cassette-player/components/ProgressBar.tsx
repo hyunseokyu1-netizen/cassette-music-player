@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   },
   fill: {
     height: "100%",
-    backgroundColor: colors.light.cassetteBeige,
+    backgroundColor: colors.light.primary,
     borderRadius: 2,
   },
   thumb: {
@@ -62,9 +62,9 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: colors.light.cassetteBeige,
+    backgroundColor: colors.light.primary,
     borderWidth: 2,
-    borderColor: colors.light.cassetteLabelBorder,
+    borderColor: colors.light.background,
   },
   times: {
     flexDirection: "row",
@@ -77,6 +77,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   remaining: {
-    color: colors.light.cassetteBeige,
+    color: colors.light.foreground,
+    fontFamily: "Inter_600SemiBold",
   },
 });

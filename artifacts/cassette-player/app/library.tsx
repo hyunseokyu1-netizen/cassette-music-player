@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
     flex: 1, flexDirection: "row", alignItems: "center",
     justifyContent: "flex-end", gap: 4,
   },
-  timeUsed: { color: colors.light.cassetteCream, fontSize: 15, fontFamily: "Inter_700Bold" },
+  timeUsed: { color: colors.light.foreground, fontSize: 15, fontFamily: "Inter_700Bold" },
   timeSep: { color: colors.light.mutedForeground, fontSize: 13 },
   timeTotal: { color: colors.light.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" },
   tapeBar: { height: 5, backgroundColor: colors.light.secondary, borderRadius: 3, overflow: "hidden", marginBottom: 6 },
@@ -434,11 +434,11 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold", letterSpacing: 2,
   },
   noiseDur: {
-    color: colors.light.cassetteCream, fontSize: 14,
+    color: colors.light.foreground, fontSize: 14,
     fontFamily: "Inter_600SemiBold", marginTop: 1,
   },
   noiseFillDur: {
-    color: colors.light.cassetteBeige, fontSize: 15,
+    color: colors.light.primary, fontSize: 15,
     fontFamily: "Inter_700Bold",
   },
   noiseFillHint: {
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   trackNumText: { color: colors.light.mutedForeground, fontSize: 11, fontFamily: "Inter_500Medium" },
   trackInfo: { flex: 1 },
   trackName: {
-    color: colors.light.cassetteCream, fontSize: 14,
+    color: colors.light.foreground, fontSize: 14,
     fontFamily: "Inter_500Medium", letterSpacing: 0.2,
   },
   trackDur: {
@@ -490,7 +490,7 @@ const styles = StyleSheet.create({
   addRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   addTxt: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   emptyState: { alignItems: "center", paddingVertical: 40, gap: 10 },
-  emptyTxt: { color: colors.light.cassetteCream, fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  emptyTxt: { color: colors.light.foreground, fontSize: 16, fontFamily: "Inter_600SemiBold" },
   emptyHint: { color: colors.light.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" },
 
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.light.border, alignSelf: "center", marginBottom: 20,
   },
   modalTitle: {
-    color: colors.light.cassetteCream, fontSize: 18,
+    color: colors.light.foreground, fontSize: 18,
     fontFamily: "Inter_700Bold", marginBottom: 4,
   },
   modalSub: {
@@ -518,7 +518,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.light.border,
   },
   presetText: {
-    color: colors.light.cassetteCream, fontSize: 14,
+    color: colors.light.foreground, fontSize: 14,
     fontFamily: "Inter_600SemiBold",
   },
   customLabel: {
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
     flex: 1, height: 46, borderRadius: 10,
     borderWidth: 1.5, borderColor: colors.light.border,
     paddingHorizontal: 14,
-    color: colors.light.cassetteCream,
+    color: colors.light.foreground,
     fontFamily: "Inter_500Medium", fontSize: 15,
   },
   customSaveBtn: {

@@ -8,8 +8,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { View } from "react-native";
-import Svg, { Circle, Line, G, Defs, RadialGradient, Stop } from "react-native-svg";
-import colors from "@/constants/colors";
+import Svg, { Circle, Line, G, Defs, RadialGradient, LinearGradient, Stop } from "react-native-svg";
 
 interface SpoolProps {
   size: number;
@@ -67,69 +66,100 @@ export function Spool({ size, radius, maxRadius, isPlaying }: SpoolProps) {
 
   const cx = size / 2;
   const cy = size / 2;
-  const hubR = radius * 0.28;
-  const spokeCount = 5;
+  const hubR = radius * 0.26;
+  const spokeCount = 8;
+  const tapeRingWidth = maxRadius - radius;
 
   const spokes = Array.from({ length: spokeCount }).map((_, i) => {
     const angle = ((i * 360) / spokeCount) * (Math.PI / 180);
     return {
-      x1: cx + hubR * Math.cos(angle),
-      y1: cy + hubR * Math.sin(angle),
-      x2: cx + radius * 0.78 * Math.cos(angle),
-      y2: cy + radius * 0.78 * Math.sin(angle),
+      x1: cx + hubR * 1.1 * Math.cos(angle),
+      y1: cy + hubR * 1.1 * Math.sin(angle),
+      x2: cx + radius * 0.82 * Math.cos(angle),
+      y2: cy + radius * 0.82 * Math.sin(angle),
     };
   });
+
+  const gradId = `rg${Math.round(radius)}`;
+  const tapeId = `tape${Math.round(radius)}`;
 
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size} style={{ position: "absolute" }}>
         <Defs>
-          <RadialGradient id={`rg${Math.round(radius)}`} cx="40%" cy="35%" r="65%">
-            <Stop offset="0%" stopColor="#5c3820" />
-            <Stop offset="100%" stopColor="#1a0d05" />
+          <RadialGradient id={gradId} cx="38%" cy="32%" r="70%">
+            <Stop offset="0%" stopColor="#d8d4c8" />
+            <Stop offset="45%" stopColor="#a8a49a" />
+            <Stop offset="100%" stopColor="#706c64" />
+          </RadialGradient>
+          <RadialGradient id={tapeId} cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor="#2a1a0c" />
+            <Stop offset="100%" stopColor="#1a0e07" />
           </RadialGradient>
         </Defs>
-        <Circle
-          cx={cx} cy={cy} r={radius}
-          fill={`url(#rg${Math.round(radius)})`}
-          stroke="#3d2010"
-          strokeWidth={1.5}
+
+        {/* Tape wound on reel (dark brown ring) */}
+        {tapeRingWidth > 2 && (
+          <Circle cx={cx} cy={cy} r={maxRadius - 1}
+            fill={`url(#${tapeId})`}
+            stroke="#120c06"
+            strokeWidth={1.5}
+          />
+        )}
+
+        {/* Main silver disk */}
+        <Circle cx={cx} cy={cy} r={radius}
+          fill={`url(#${gradId})`}
+          stroke="#505048"
+          strokeWidth={1}
         />
-        <Circle
-          cx={cx} cy={cy} r={radius * 0.58}
-          fill="#120a03"
-          stroke="#2e1808"
+
+        {/* Inner hub ring */}
+        <Circle cx={cx} cy={cy} r={radius * 0.56}
+          fill="none"
+          stroke="rgba(255,255,255,0.12)"
+          strokeWidth={1}
+        />
+
+        {/* Dark inner area */}
+        <Circle cx={cx} cy={cy} r={radius * 0.55}
+          fill="#1e1c18"
+          stroke="#282420"
           strokeWidth={1}
         />
       </Svg>
 
+      {/* Rotating spokes layer */}
       <Animated.View style={[{ position: "absolute", width: size, height: size }, animStyle]}>
         <Svg width={size} height={size}>
-          {spokes.map((s, i) => (
+          {spokes.map((sp, i) => (
             <Line
               key={i}
-              x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
-              stroke="#6b3e1e"
-              strokeWidth={2.5}
+              x1={sp.x1} y1={sp.y1} x2={sp.x2} y2={sp.y2}
+              stroke="#c0bcb0"
+              strokeWidth={2}
               strokeLinecap="round"
             />
           ))}
-          <Circle cx={cx} cy={cy} r={hubR} fill="#6b3e1e" stroke="#8b5a2b" strokeWidth={1} />
-          <Circle cx={cx} cy={cy} r={hubR * 0.45} fill="#1a0d05" />
+          {/* Hub cap */}
+          <Circle cx={cx} cy={cy} r={hubR}
+            fill="#989490" stroke="#b0aca4" strokeWidth={1} />
+          {/* Hub center screw */}
+          <Circle cx={cx} cy={cy} r={hubR * 0.5}
+            fill="#585450" />
+          <Line x1={cx - hubR * 0.35} y1={cy} x2={cx + hubR * 0.35} y2={cy}
+            stroke="rgba(0,0,0,0.4)" strokeWidth={1} strokeLinecap="round" />
+          <Line x1={cx} y1={cy - hubR * 0.35} x2={cx} y2={cy + hubR * 0.35}
+            stroke="rgba(0,0,0,0.4)" strokeWidth={1} strokeLinecap="round" />
         </Svg>
       </Animated.View>
 
-      <Svg
-        width={size}
-        height={size}
-        style={{ position: "absolute" }}
-        pointerEvents="none"
-      >
-        <Circle
-          cx={cx} cy={cy} r={radius * 0.57}
+      {/* Top gloss layer */}
+      <Svg width={size} height={size} style={{ position: "absolute" }} pointerEvents="none">
+        <Circle cx={cx} cy={cy} r={radius * 0.56}
           fill="none"
-          stroke="rgba(255,200,120,0.04)"
-          strokeWidth={radius * 0.1}
+          stroke="rgba(255,255,255,0.06)"
+          strokeWidth={radius * 0.08}
         />
       </Svg>
     </View>

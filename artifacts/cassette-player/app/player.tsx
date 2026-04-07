@@ -62,14 +62,14 @@ export default function PlayerScreen() {
     <View style={[styles.container, { paddingTop: topPad, paddingBottom: bottomPad }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.push("/library")} style={styles.btn} activeOpacity={0.7}>
-          <Icon name="list" size={22} color={colors.light.cassetteBeige} />
+          <Icon name="list" size={22} color={colors.light.foreground} />
         </TouchableOpacity>
         <View style={[styles.sidePill, { borderColor: sideColor }]}>
           <Text style={[styles.sidePillText, { color: sideColor }]}>SIDE {currentSide}</Text>
         </View>
         <TouchableOpacity onPress={handleFlip} style={styles.btn} activeOpacity={0.7} disabled={isPlayingNoise}>
           <Icon name="refresh-cw" size={20}
-            color={isPlayingNoise ? colors.light.mutedForeground : colors.light.cassetteBeige} />
+            color={isPlayingNoise ? colors.light.mutedForeground : colors.light.foreground} />
         </TouchableOpacity>
       </View>
 
@@ -148,12 +148,12 @@ const styles = StyleSheet.create({
     marginBottom: 12, minHeight: 52, justifyContent: "center",
   },
   trackTitle: {
-    color: colors.light.cassetteCream, fontSize: 17,
+    color: colors.light.foreground, fontSize: 17,
     fontFamily: "Inter_700Bold", textAlign: "center", letterSpacing: 0.4,
   },
   noiseRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  noiseText: { color: colors.light.cassetteBeige, fontSize: 12, fontFamily: "Inter_600SemiBold", letterSpacing: 3 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.light.cassetteBeige, opacity: 0.7 },
+  noiseText: { color: colors.light.mutedForeground, fontSize: 12, fontFamily: "Inter_600SemiBold", letterSpacing: 3 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.light.primary, opacity: 0.7 },
   sideRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   sideCount: { fontSize: 11, fontFamily: "Inter_500Medium", color: colors.light.mutedForeground, letterSpacing: 0.5 },
   sideDot: { color: colors.light.mutedForeground, fontSize: 12 },
@@ -161,8 +161,9 @@ const styles = StyleSheet.create({
   footer: { alignItems: "center" },
   flipBtn: {
     flexDirection: "row", alignItems: "center", gap: 7,
-    backgroundColor: colors.light.cassetteBeige,
+    backgroundColor: colors.light.card,
+    borderWidth: 1, borderColor: colors.light.border,
     paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20,
   },
-  flipText: { color: colors.light.cassetteDark, fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 2 },
+  flipText: { color: colors.light.foreground, fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 2 },
 });
