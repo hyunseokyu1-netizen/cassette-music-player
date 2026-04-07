@@ -84,12 +84,18 @@ export function CassetteTape({
             <Stop offset="100%" stopColor="#ece5d5" />
           </LinearGradient>
           <LinearGradient id="winGrad" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#0e0d0b" />
-            <Stop offset="100%" stopColor="#090807" />
+            <Stop offset="0%" stopColor="#110f0b" />
+            <Stop offset="100%" stopColor="#080705" />
           </LinearGradient>
-          <LinearGradient id="winGlass" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="rgba(255,220,150,0.06)" />
-            <Stop offset="40%" stopColor="rgba(0,0,0,0)" />
+          <LinearGradient id="winGlass" x1="0.1" y1="0" x2="0.6" y2="1">
+            <Stop offset="0%" stopColor="rgba(255,210,120,0.13)" />
+            <Stop offset="30%" stopColor="rgba(255,180,80,0.05)" />
+            <Stop offset="100%" stopColor="rgba(0,0,0,0)" />
+          </LinearGradient>
+          <LinearGradient id="winGlass2" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0%" stopColor="rgba(255,200,100,0.07)" />
+            <Stop offset="50%" stopColor="rgba(0,0,0,0)" />
+            <Stop offset="100%" stopColor="rgba(255,200,100,0.04)" />
           </LinearGradient>
           <LinearGradient id="screwGrad" x1="0" y1="0" x2="1" y2="1">
             <Stop offset="0%" stopColor="#b8b0a0" />
@@ -152,22 +158,30 @@ export function CassetteTape({
           rx={winR - 1} ry={winR - 1} fill="none"
           stroke="rgba(255,200,100,0.06)" strokeWidth={1} />
 
-        {/* Window glass sheen */}
-        <Rect x={winX + 2} y={winY + 2} width={winW - 4} height={winH / 3}
+        {/* Window glass sheen - diagonal warm */}
+        <Rect x={winX + 2} y={winY + 2} width={winW - 4} height={winH - 4}
           rx={winR - 1} ry={winR - 1} fill="url(#winGlass)" />
+        {/* Window glass sheen - side edge warm */}
+        <Rect x={winX + 2} y={winY + 2} width={winW - 4} height={winH - 4}
+          rx={winR - 1} ry={winR - 1} fill="url(#winGlass2)" />
 
         {/* Window outer bevel (light top edge) */}
         <Path
           d={`M ${winX + winR} ${winY} L ${winX + winW - winR} ${winY}`}
-          stroke="rgba(255,255,255,0.08)" strokeWidth={1.2} strokeLinecap="round" />
+          stroke="rgba(255,255,255,0.1)" strokeWidth={1.2} strokeLinecap="round" />
 
-        {/* Tape path line */}
+        {/* Tape path – dark brown base */}
         <Path
-          d={`M ${leftGuideX + guideR * 1.6} ${guideY} L ${rightGuideX - guideR * 1.6} ${guideY}`}
-          stroke="#1a1208" strokeWidth={3.5 * s} strokeLinecap="round" opacity={0.95} />
+          d={`M ${leftGuideX + guideR * 1.5} ${guideY} L ${rightGuideX - guideR * 1.5} ${guideY}`}
+          stroke="#150f07" strokeWidth={5 * s} strokeLinecap="round" />
+        {/* Tape path – warm brown sheen */}
         <Path
-          d={`M ${leftGuideX + guideR * 1.6} ${guideY} L ${rightGuideX - guideR * 1.6} ${guideY}`}
-          stroke="rgba(140,90,30,0.25)" strokeWidth={1.5 * s} strokeLinecap="round" />
+          d={`M ${leftGuideX + guideR * 1.5} ${guideY} L ${rightGuideX - guideR * 1.5} ${guideY}`}
+          stroke="rgba(160,100,40,0.3)" strokeWidth={2 * s} strokeLinecap="round" />
+        {/* Tape edge highlight */}
+        <Path
+          d={`M ${leftGuideX + guideR * 1.5} ${guideY - 1.5 * s} L ${rightGuideX - guideR * 1.5} ${guideY - 1.5 * s}`}
+          stroke="rgba(220,160,60,0.12)" strokeWidth={1 * s} strokeLinecap="round" />
 
         {/* Guide rollers */}
         <Circle cx={leftGuideX} cy={guideY} r={guideR}

@@ -8,7 +8,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { View } from "react-native";
-import Svg, { Circle, Line, G, Defs, RadialGradient, LinearGradient, Stop } from "react-native-svg";
+import Svg, { Circle, Line, Path, Defs, RadialGradient, LinearGradient, Stop } from "react-native-svg";
 
 interface SpoolProps {
   size: number;
@@ -23,13 +23,8 @@ export function Spool({ size, radius, maxRadius, isPlaying }: SpoolProps) {
   const radiusShared = useSharedValue<number>(radius);
   const maxRadiusShared = useSharedValue<number>(maxRadius);
 
-  useEffect(() => {
-    radiusShared.value = radius;
-  }, [radius]);
-
-  useEffect(() => {
-    maxRadiusShared.value = maxRadius;
-  }, [maxRadius]);
+  useEffect(() => { radiusShared.value = radius; }, [radius]);
+  useEffect(() => { maxRadiusShared.value = maxRadius; }, [maxRadius]);
 
   useEffect(() => {
     isPlayingShared.value = isPlaying;
@@ -47,9 +42,7 @@ export function Spool({ size, radius, maxRadius, isPlaying }: SpoolProps) {
             { duration: period, easing: Easing.linear },
             function (finished) {
               "worklet";
-              if (finished && isPlayingShared.value) {
-                step();
-              }
+              if (finished && isPlayingShared.value) { step(); }
             }
           );
         }
@@ -66,101 +59,147 @@ export function Spool({ size, radius, maxRadius, isPlaying }: SpoolProps) {
 
   const cx = size / 2;
   const cy = size / 2;
-  const hubR = radius * 0.26;
+  const hubR = radius * 0.28;
   const spokeCount = 8;
   const tapeRingWidth = maxRadius - radius;
 
   const spokes = Array.from({ length: spokeCount }).map((_, i) => {
     const angle = ((i * 360) / spokeCount) * (Math.PI / 180);
     return {
-      x1: cx + hubR * 1.1 * Math.cos(angle),
-      y1: cy + hubR * 1.1 * Math.sin(angle),
-      x2: cx + radius * 0.82 * Math.cos(angle),
-      y2: cy + radius * 0.82 * Math.sin(angle),
+      x1: cx + hubR * 1.15 * Math.cos(angle),
+      y1: cy + hubR * 1.15 * Math.sin(angle),
+      x2: cx + radius * 0.80 * Math.cos(angle),
+      y2: cy + radius * 0.80 * Math.sin(angle),
     };
   });
 
-  const gradId = `rg${Math.round(radius)}`;
-  const tapeId = `tape${Math.round(radius)}`;
+  const gradId = `rg_${Math.round(radius * 10)}`;
+  const tapeId = `tp_${Math.round(radius * 10)}`;
+  const hubId = `hb_${Math.round(radius * 10)}`;
+  const spindleId = `sp_${Math.round(radius * 10)}`;
 
   return (
     <View style={{ width: size, height: size }}>
+      {/* Static base layer */}
       <Svg width={size} height={size} style={{ position: "absolute" }}>
         <Defs>
-          <RadialGradient id={gradId} cx="38%" cy="32%" r="70%">
-            <Stop offset="0%" stopColor="#d8d4c8" />
-            <Stop offset="45%" stopColor="#a8a49a" />
-            <Stop offset="100%" stopColor="#706c64" />
-          </RadialGradient>
+          {/* Tape wound ring */}
           <RadialGradient id={tapeId} cx="50%" cy="50%" r="50%">
-            <Stop offset="0%" stopColor="#2a1a0c" />
-            <Stop offset="100%" stopColor="#1a0e07" />
+            <Stop offset="70%" stopColor="#221408" />
+            <Stop offset="100%" stopColor="#120a04" />
+          </RadialGradient>
+          {/* Silver disk */}
+          <RadialGradient id={gradId} cx="35%" cy="30%" r="75%">
+            <Stop offset="0%" stopColor="#dedad2" />
+            <Stop offset="40%" stopColor="#b8b4aa" />
+            <Stop offset="100%" stopColor="#787468" />
+          </RadialGradient>
+          {/* Hub - warm amber */}
+          <RadialGradient id={hubId} cx="40%" cy="35%" r="70%">
+            <Stop offset="0%" stopColor="#d8a050" />
+            <Stop offset="50%" stopColor="#a86c28" />
+            <Stop offset="100%" stopColor="#704818" />
+          </RadialGradient>
+          {/* Center spindle hole - orange */}
+          <RadialGradient id={spindleId} cx="40%" cy="35%" r="65%">
+            <Stop offset="0%" stopColor="#F28C28" />
+            <Stop offset="60%" stopColor="#C86020" />
+            <Stop offset="100%" stopColor="#8A3C10" />
           </RadialGradient>
         </Defs>
 
-        {/* Tape wound on reel (dark brown ring) */}
-        {tapeRingWidth > 2 && (
-          <Circle cx={cx} cy={cy} r={maxRadius - 1}
-            fill={`url(#${tapeId})`}
-            stroke="#120c06"
-            strokeWidth={1.5}
-          />
+        {/* Tape ring (only when there's tape wound) */}
+        {tapeRingWidth > 1 && (
+          <>
+            <Circle cx={cx} cy={cy} r={maxRadius}
+              fill={`url(#${tapeId})`} stroke="#0e0805" strokeWidth={1} />
+            {/* Tape edge highlight */}
+            <Circle cx={cx} cy={cy} r={maxRadius}
+              fill="none" stroke="rgba(180,120,60,0.15)" strokeWidth={1.5} />
+          </>
         )}
 
-        {/* Main silver disk */}
+        {/* Silver mechanical disk */}
         <Circle cx={cx} cy={cy} r={radius}
           fill={`url(#${gradId})`}
-          stroke="#505048"
-          strokeWidth={1}
-        />
+          stroke="#606058" strokeWidth={1.2} />
 
-        {/* Inner hub ring */}
-        <Circle cx={cx} cy={cy} r={radius * 0.56}
-          fill="none"
-          stroke="rgba(255,255,255,0.12)"
-          strokeWidth={1}
-        />
+        {/* Outer ring detail */}
+        <Circle cx={cx} cy={cy} r={radius * 0.92}
+          fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth={0.8} />
 
-        {/* Dark inner area */}
-        <Circle cx={cx} cy={cy} r={radius * 0.55}
-          fill="#1e1c18"
-          stroke="#282420"
-          strokeWidth={1}
-        />
+        {/* Dark inner zone */}
+        <Circle cx={cx} cy={cy} r={radius * 0.58}
+          fill="#1c1a14" stroke="#282420" strokeWidth={0.8} />
       </Svg>
 
-      {/* Rotating spokes layer */}
+      {/* Rotating spokes + hub layer */}
       <Animated.View style={[{ position: "absolute", width: size, height: size }, animStyle]}>
         <Svg width={size} height={size}>
+          <Defs>
+            <RadialGradient id={`${hubId}_r`} cx="40%" cy="35%" r="70%">
+              <Stop offset="0%" stopColor="#d8a050" />
+              <Stop offset="50%" stopColor="#a86c28" />
+              <Stop offset="100%" stopColor="#704818" />
+            </RadialGradient>
+            <RadialGradient id={`${spindleId}_r`} cx="40%" cy="35%" r="65%">
+              <Stop offset="0%" stopColor="#F28C28" />
+              <Stop offset="60%" stopColor="#C86020" />
+              <Stop offset="100%" stopColor="#8A3C10" />
+            </RadialGradient>
+          </Defs>
+
+          {/* Spokes */}
           {spokes.map((sp, i) => (
             <Line
               key={i}
               x1={sp.x1} y1={sp.y1} x2={sp.x2} y2={sp.y2}
-              stroke="#c0bcb0"
-              strokeWidth={2}
+              stroke="#c8c4b8"
+              strokeWidth={2.2}
               strokeLinecap="round"
             />
           ))}
-          {/* Hub cap */}
+
+          {/* Spoke highlight overlay */}
+          {spokes.map((sp, i) => (
+            <Line
+              key={`h${i}`}
+              x1={sp.x1} y1={sp.y1}
+              x2={sp.x1 + (sp.x2 - sp.x1) * 0.4}
+              y2={sp.y1 + (sp.y2 - sp.y1) * 0.4}
+              stroke="rgba(255,255,255,0.18)"
+              strokeWidth={1}
+              strokeLinecap="round"
+            />
+          ))}
+
+          {/* Amber hub cap */}
           <Circle cx={cx} cy={cy} r={hubR}
-            fill="#989490" stroke="#b0aca4" strokeWidth={1} />
-          {/* Hub center screw */}
-          <Circle cx={cx} cy={cy} r={hubR * 0.5}
-            fill="#585450" />
-          <Line x1={cx - hubR * 0.35} y1={cy} x2={cx + hubR * 0.35} y2={cy}
-            stroke="rgba(0,0,0,0.4)" strokeWidth={1} strokeLinecap="round" />
-          <Line x1={cx} y1={cy - hubR * 0.35} x2={cx} y2={cy + hubR * 0.35}
-            stroke="rgba(0,0,0,0.4)" strokeWidth={1} strokeLinecap="round" />
+            fill={`url(#${hubId}_r)`}
+            stroke="#c88030" strokeWidth={1} />
+
+          {/* Orange drive spindle hole */}
+          <Circle cx={cx} cy={cy} r={hubR * 0.55}
+            fill={`url(#${spindleId}_r)`} />
+
+          {/* Spindle rim */}
+          <Circle cx={cx} cy={cy} r={hubR * 0.55}
+            fill="none" stroke="rgba(255,200,100,0.3)" strokeWidth={0.8} />
+
+          {/* Spindle center dark */}
+          <Circle cx={cx} cy={cy} r={hubR * 0.22}
+            fill="#1a0e06" />
         </Svg>
       </Animated.View>
 
-      {/* Top gloss layer */}
+      {/* Top gloss */}
       <Svg width={size} height={size} style={{ position: "absolute" }} pointerEvents="none">
-        <Circle cx={cx} cy={cy} r={radius * 0.56}
+        <Circle cx={cx - radius * 0.1} cy={cy - radius * 0.15} r={radius * 0.35}
+          fill="rgba(255,255,255,0.06)" />
+        <Circle cx={cx} cy={cy} r={radius}
           fill="none"
-          stroke="rgba(255,255,255,0.06)"
-          strokeWidth={radius * 0.08}
-        />
+          stroke="rgba(255,255,255,0.08)"
+          strokeWidth={1.5} />
       </Svg>
     </View>
   );
