@@ -3,7 +3,6 @@ import { View, Text, StyleSheet } from "react-native";
 import colors from "@/constants/colors";
 
 const TAPE_MS = 30 * 60 * 1000;
-const TRACK_COLOR = "#D8C89A";
 
 interface ProgressBarProps {
   tapePosition: number;
@@ -42,35 +41,30 @@ export function ProgressBar({ tapePosition }: ProgressBarProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 28,
-    gap: 7,
+    paddingHorizontal: 24,
+    gap: 8,
   },
   track: {
-    height: 5,
-    backgroundColor: TRACK_COLOR,
-    borderRadius: 3,
+    height: 4,
+    backgroundColor: colors.light.secondary,
+    borderRadius: 2,
     position: "relative",
     overflow: "visible",
   },
   fill: {
     height: "100%",
-    backgroundColor: colors.light.primary,
-    borderRadius: 3,
+    backgroundColor: colors.light.cassetteBeige,
+    borderRadius: 2,
   },
   thumb: {
     position: "absolute",
     top: -5,
-    width: 15,
-    height: 15,
-    borderRadius: 8,
-    backgroundColor: colors.light.primary,
-    borderWidth: 2.5,
-    borderColor: "#ffffff",
-    shadowColor: "#B86010",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 4,
-    elevation: 4,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.light.cassetteBeige,
+    borderWidth: 2,
+    borderColor: colors.light.cassetteLabelBorder,
   },
   times: {
     flexDirection: "row",
@@ -83,7 +77,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   remaining: {
-    color: colors.light.foreground,
-    fontFamily: "Inter_600SemiBold",
+    color: colors.light.cassetteBeige,
   },
 });
