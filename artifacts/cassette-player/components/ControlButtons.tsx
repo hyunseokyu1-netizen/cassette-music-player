@@ -12,6 +12,17 @@ interface ControlButtonsProps {
   onRewind: (seconds: number) => void;
 }
 
+const PANEL_BG = "#EAE2D8";
+const BTN_BG = "#E2D9CE";
+const BTN_SHADOW = "#C4B8A8";
+const BTN_HIGHLIGHT = "#F5F0E8";
+const BTN_ACTIVE_BG = "#c47a38";
+const BTN_ACTIVE_SHADOW = "#9a5c20";
+const BTN_ACTIVE_HIGHLIGHT = "#e8a060";
+const LABEL_COLOR = "#6b4a2e";
+const LABEL_ACTIVE = "#ffffff";
+const LABEL_DISABLED = "#C4B8A8";
+
 function DeckButton({
   label,
   subLabel,
@@ -51,7 +62,7 @@ function DeckButton({
       {({ pressed }) => (
         <View style={styles.buttonInner}>
           {isLoading ? (
-            <ActivityIndicator size="small" color={colors.light.cassetteBeige} />
+            <ActivityIndicator size="small" color={BTN_ACTIVE_BG} />
           ) : (
             <>
               <Text style={[
@@ -72,7 +83,6 @@ function DeckButton({
               </Text>
             </>
           )}
-          {active && <View style={styles.led} />}
         </View>
       )}
     </Pressable>
@@ -119,7 +129,6 @@ export function ControlButtons({
   return (
     <View style={styles.container}>
       <View style={styles.panel}>
-        <View style={styles.panelRidge} />
         <View style={styles.row}>
           <DeckButton
             label="◄◄"
@@ -153,85 +162,81 @@ export function ControlButtons({
   );
 }
 
-const BTN_BG = "#3a2510";
-const BTN_TOP = "#5c3820";
-const BTN_BOTTOM = "#1a0e06";
-const BTN_ACTIVE_BG = "#6b3412";
-const BTN_ACTIVE_TOP = "#a05828";
-
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     paddingHorizontal: 24,
   },
   panel: {
-    backgroundColor: colors.light.card,
-    borderRadius: 12,
+    backgroundColor: PANEL_BG,
+    borderRadius: 20,
     paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderTopWidth: 2,
-    borderLeftWidth: 1,
-    borderTopColor: colors.light.border,
-    borderLeftColor: colors.light.border,
-    borderBottomWidth: 3,
-    borderRightWidth: 2,
-    borderBottomColor: colors.light.cassetteDark,
-    borderRightColor: colors.light.cassetteDark,
+    paddingHorizontal: 28,
     width: "100%",
-  },
-  panelRidge: {
-    position: "absolute",
-    top: 0,
-    left: 20,
-    right: 20,
-    height: 3,
-    backgroundColor: colors.light.border,
-    borderBottomLeftRadius: 2,
-    borderBottomRightRadius: 2,
-    opacity: 0.5,
+    shadowColor: "#A09080",
+    shadowOffset: { width: 4, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 6,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderTopColor: BTN_HIGHLIGHT,
+    borderLeftColor: BTN_HIGHLIGHT,
+    borderBottomWidth: 1,
+    borderRightWidth: 1,
+    borderBottomColor: "#C8BBAA",
+    borderRightColor: "#C8BBAA",
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 14,
+    gap: 16,
   },
 
   button: {
-    width: 68,
-    height: 60,
-    borderRadius: 6,
+    width: 72,
+    height: 62,
+    borderRadius: 14,
     backgroundColor: BTN_BG,
-    borderTopWidth: 2,
-    borderLeftWidth: 1,
-    borderTopColor: BTN_TOP,
-    borderLeftColor: BTN_TOP,
-    borderBottomWidth: 3,
+    borderTopWidth: 1.5,
+    borderLeftWidth: 1.5,
+    borderTopColor: BTN_HIGHLIGHT,
+    borderLeftColor: BTN_HIGHLIGHT,
+    borderBottomWidth: 2,
     borderRightWidth: 2,
-    borderBottomColor: BTN_BOTTOM,
-    borderRightColor: BTN_BOTTOM,
+    borderBottomColor: BTN_SHADOW,
+    borderRightColor: BTN_SHADOW,
+    shadowColor: "#A09080",
+    shadowOffset: { width: 2, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
   },
   buttonLarge: {
-    width: 84,
-    height: 72,
-    borderRadius: 8,
+    width: 90,
+    height: 76,
+    borderRadius: 18,
   },
   buttonPressed: {
-    borderTopColor: BTN_BOTTOM,
-    borderLeftColor: BTN_BOTTOM,
-    borderBottomColor: BTN_TOP,
-    borderRightColor: BTN_TOP,
-    transform: [{ translateY: 2 }],
+    borderTopColor: BTN_SHADOW,
+    borderLeftColor: BTN_SHADOW,
+    borderBottomColor: BTN_HIGHLIGHT,
+    borderRightColor: BTN_HIGHLIGHT,
+    transform: [{ translateY: 1 }],
+    shadowOffset: { width: 1, height: 1 },
+    shadowOpacity: 0.1,
+    elevation: 1,
   },
   buttonActive: {
     backgroundColor: BTN_ACTIVE_BG,
-    borderTopColor: BTN_ACTIVE_TOP,
-    borderLeftColor: BTN_ACTIVE_TOP,
-    borderBottomColor: BTN_BOTTOM,
-    borderRightColor: BTN_BOTTOM,
+    borderTopColor: BTN_ACTIVE_HIGHLIGHT,
+    borderLeftColor: BTN_ACTIVE_HIGHLIGHT,
+    borderBottomColor: BTN_ACTIVE_SHADOW,
+    borderRightColor: BTN_ACTIVE_SHADOW,
   },
   buttonDisabled: {
-    opacity: 0.35,
+    opacity: 0.45,
   },
 
   buttonInner: {
@@ -239,52 +244,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    position: "relative",
   },
 
   label: {
     fontSize: 20,
-    color: colors.light.mutedForeground,
+    color: LABEL_COLOR,
     fontFamily: "Inter_700Bold",
     lineHeight: 24,
   },
   labelLarge: {
-    fontSize: 26,
-    lineHeight: 30,
+    fontSize: 28,
+    lineHeight: 32,
   },
   labelActive: {
-    color: colors.light.cassetteBeige,
+    color: LABEL_ACTIVE,
   },
   labelPressed: {
-    opacity: 0.75,
+    opacity: 0.7,
   },
   labelDisabled: {
-    color: colors.light.border,
+    color: LABEL_DISABLED,
   },
 
   subLabel: {
     fontSize: 8,
-    color: colors.light.mutedForeground,
+    color: LABEL_COLOR,
     fontFamily: "Inter_700Bold",
     letterSpacing: 1.5,
-    opacity: 0.6,
+    opacity: 0.55,
   },
   subLabelActive: {
-    color: colors.light.cassetteBeige,
-    opacity: 0.8,
+    color: LABEL_ACTIVE,
+    opacity: 0.85,
   },
   subLabelDisabled: {
-    color: colors.light.border,
-  },
-
-  led: {
-    position: "absolute",
-    top: 4,
-    right: 5,
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: colors.light.cassetteBeige,
-    opacity: 0.9,
+    color: LABEL_DISABLED,
   },
 });

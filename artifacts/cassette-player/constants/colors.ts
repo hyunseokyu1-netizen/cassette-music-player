@@ -3,29 +3,29 @@ const colors = {
     text: "#2c1a0e",
     tint: "#8b4513",
 
-    background: "#2c1a0e",
-    foreground: "#f5e6c8",
+    background: "#F5F1EA",
+    foreground: "#2c1a0e",
 
-    card: "#3d2415",
-    cardForeground: "#f5e6c8",
+    card: "#F2EAE1",
+    cardForeground: "#2c1a0e",
 
-    primary: "#d4b483",
-    primaryForeground: "#2c1a0e",
+    primary: "#8b4513",
+    primaryForeground: "#ffffff",
 
-    secondary: "#4a2f1a",
-    secondaryForeground: "#d4b483",
+    secondary: "#E8DFD5",
+    secondaryForeground: "#5c3820",
 
-    muted: "#4a2f1a",
-    mutedForeground: "#a0855a",
+    muted: "#EFE7DC",
+    mutedForeground: "#7a5c3a",
 
-    accent: "#8b4513",
-    accentForeground: "#f5e6c8",
+    accent: "#9b5928",
+    accentForeground: "#ffffff",
 
     destructive: "#c0392b",
     destructiveForeground: "#ffffff",
 
-    border: "#5c3820",
-    input: "#5c3820",
+    border: "#D4C4B0",
+    input: "#D4C4B0",
 
     cassetteBrown: "#4a2f1a",
     cassetteBeige: "#d4b483",
@@ -39,6 +39,8 @@ const colors = {
     cassetteLabelBorder: "#c9a96e",
     cassetteScrew: "#6b4423",
     tape: "#1a0f07",
+
+    iconColor: "#5c3820",
   },
   radius: 6,
 };
