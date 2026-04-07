@@ -51,6 +51,8 @@ function NoiseEditModal({ visible, noise, side, onSave, onClose }: NoiseEditModa
     onClose();
   };
 
+  const sideColor = side === "A" ? "#9e3c3c" : "#2b5499";
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView style={styles.modalOverlay} behavior={Platform.OS === "ios" ? "padding" : "height"}>
@@ -67,11 +69,11 @@ function NoiseEditModal({ visible, noise, side, onSave, onClose }: NoiseEditModa
               return (
                 <TouchableOpacity
                   key={ms}
-                  style={[styles.presetBtn, active && styles.presetBtnActive]}
+                  style={[styles.presetBtn, active && { backgroundColor: sideColor, borderColor: sideColor }]}
                   onPress={() => handlePreset(ms)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.presetText, active && styles.presetTextActive]}>
+                  <Text style={[styles.presetText, active && { color: "#fff" }]}>
                     {ms < 1000 ? `${ms / 1000}s` : `${ms / 1000}s`}
                   </Text>
                 </TouchableOpacity>
@@ -91,7 +93,7 @@ function NoiseEditModal({ visible, noise, side, onSave, onClose }: NoiseEditModa
               onSubmitEditing={handleCustomSave}
             />
             <TouchableOpacity
-              style={styles.customSaveBtn}
+              style={[styles.customSaveBtn, { backgroundColor: sideColor }]}
               onPress={handleCustomSave}
               activeOpacity={0.8}
             >
@@ -125,6 +127,7 @@ function SidePanel({
   side, items, currentSide, currentItemIdx, isPlaying, isPlayingNoise,
   isAdding, onPlayItem, onRemoveTrack, onEditNoise, onAdd,
 }: SidePanelProps) {
+  const sideColor = side === "A" ? "#9e3c3c" : "#2b5499";
   const used = totalMs(items);
   const remaining = MAX_SIDE_MS - used;
   const fillRatio = Math.min(1, used / MAX_SIDE_MS);
@@ -134,16 +137,23 @@ function SidePanel({
 
   return (
     <View style={styles.panel}>
-      <View style={styles.tapeBuilderRow}>
-        <Text style={styles.tapeBuilderLabel}>TAPE Builder</Text>
-        <Text style={[styles.tapeTime, isFull && { color: colors.light.primary }]}>
-          {formatMs(used)} / 30:00
-        </Text>
+      <View style={styles.panelHeader}>
+        <View style={[styles.sideBadge, { backgroundColor: sideColor }]}>
+          <Text style={styles.sideBadgeText}>SIDE {side}</Text>
+        </View>
+        <View style={styles.panelHeaderRight}>
+          <Text style={[styles.timeUsed, isFull && { color: "#c07040" }]}>{formatMs(used)}</Text>
+          <Text style={styles.timeSep}>/</Text>
+          <Text style={styles.timeTotal}>30:00</Text>
+        </View>
       </View>
 
       <View style={styles.tapeBar}>
-        <View style={[styles.tapeFill, { width: `${fillRatio * 100}%` }]} />
+        <View style={[styles.tapeFill, { width: `${fillRatio * 100}%`, backgroundColor: sideColor }]} />
       </View>
+      <Text style={[styles.timeRemaining, isFull && { color: "#c07040" }]}>
+        {isFull ? "Tape full — 30:00 limit reached" : `${formatMs(remaining)} remaining`}
+      </Text>
 
       {items.map((item, itemIdx) => {
         const isCurrentItem = currentSide === side && currentItemIdx === itemIdx;
@@ -151,24 +161,36 @@ function SidePanel({
 
         if (item.type === "noise") {
           const isLastItem = itemIdx === items.length - 1;
-          const fillMs = isLastItem ? MAX_SIDE_MS - (used - item.duration) : null;
+          const fillMs = isLastItem
+            ? MAX_SIDE_MS - (used - item.duration)
+            : null;
           return (
             <TouchableOpacity
               key={item.id}
               style={[styles.noiseRow, isActive && styles.noiseRowActive]}
-              onPress={() => !isLastItem && onEditNoise(item)}
-              activeOpacity={isLastItem ? 1 : 0.7}
+              onPress={() => onEditNoise(item)}
+              activeOpacity={0.7}
             >
-              <Text style={styles.noiseDash}>—</Text>
-              <Text style={styles.noiseLabelText}>
-                {isLastItem
-                  ? `테이프 끝까지  ${formatMs(fillMs!)}`
-                  : `노이즈  ${(item.duration / 1000).toFixed(1)}초`
-                }
-              </Text>
+              <View style={styles.noiseIcon}>
+                <Text style={styles.noiseIconChar}>≈</Text>
+              </View>
+              <View style={styles.noiseInfo}>
+                <Text style={styles.noiseLabel}>
+                  {isLastItem ? "TAPE FILL" : "TAPE NOISE"}
+                </Text>
+                {isLastItem ? (
+                  <Text style={[styles.noiseDur, styles.noiseFillDur]}>
+                    {formatMs(fillMs!)}
+                    <Text style={styles.noiseFillHint}> (to end)</Text>
+                  </Text>
+                ) : (
+                  <Text style={styles.noiseDur}>{(item.duration / 1000).toFixed(1)}s</Text>
+                )}
+              </View>
               {!isLastItem && (
-                <View style={styles.noiseEditDots}>
-                  <Text style={styles.dotsText}>···</Text>
+                <View style={styles.editHint}>
+                  <Text style={styles.editHintText}>edit</Text>
+                  <Icon name="info" size={11} color={colors.light.mutedForeground} />
                 </View>
               )}
             </TouchableOpacity>
@@ -183,17 +205,21 @@ function SidePanel({
                 onPress={() => onPlayItem(itemIdx)}
                 activeOpacity={0.7}
               >
-                <View style={[styles.trackDot, isPlayingThis && styles.trackDotActive]}>
+                <View style={[styles.trackNum, isPlayingThis && { backgroundColor: sideColor, borderColor: sideColor }]}>
                   {isPlayingThis
-                    ? <Icon name="volume-2" size={10} color="#fff" />
-                    : null
+                    ? <Icon name="volume-2" size={13} color="#fff" />
+                    : <Text style={[styles.trackNumText, isActive && { color: colors.light.cassetteBeige }]}>
+                        {trackNum.toString().padStart(2, "0")}
+                      </Text>
                   }
                 </View>
-                <Text style={[styles.trackName, isActive && styles.trackNameActive]} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                <Text style={styles.trackDurText}>
-                  ({item.duration > 0 ? formatMs(item.duration) : "--:--"})
+                <View style={styles.trackInfo}>
+                  <Text style={[styles.trackName, isActive && { color: colors.light.cassetteBeige }]} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                </View>
+                <Text style={styles.trackDur}>
+                  {item.duration > 0 ? formatMs(item.duration) : "--:--"}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -201,7 +227,7 @@ function SidePanel({
                 onPress={() => onRemoveTrack(item.id)}
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <Icon name="align-justify" size={16} color={colors.light.border} />
+                <Icon name="x" size={16} color={colors.light.mutedForeground} />
               </TouchableOpacity>
             </View>
           );
@@ -210,20 +236,20 @@ function SidePanel({
 
       {!isFull && (
         <TouchableOpacity
-          style={[styles.addBtn, isAdding && styles.addBtnDisabled]}
+          style={[styles.addBtn, { borderColor: sideColor }, isAdding && styles.addBtnDisabled]}
           onPress={onAdd}
           disabled={isAdding}
-          activeOpacity={0.85}
+          activeOpacity={0.8}
         >
           {isAdding ? (
             <View style={styles.addRow}>
-              <ActivityIndicator size="small" color="#fff" />
-              <Text style={styles.addTxt}>Loading track durations…</Text>
+              <ActivityIndicator size="small" color={sideColor} />
+              <Text style={[styles.addTxt, { color: sideColor }]}>Loading track durations…</Text>
             </View>
           ) : (
             <View style={styles.addRow}>
-              <Icon name="plus" size={16} color="#fff" />
-              <Text style={styles.addTxt}>+ 트랙 추가</Text>
+              <Icon name="plus" size={16} color={sideColor} />
+              <Text style={[styles.addTxt, { color: sideColor }]}>Add Audio Files</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -231,9 +257,9 @@ function SidePanel({
 
       {trackCount === 0 && !isAdding && (
         <View style={styles.emptyState}>
-          <Icon name="music" size={36} color={colors.light.border} />
-          <Text style={styles.emptyTxt}>Side {side}에 곡이 없습니다</Text>
-          <Text style={styles.emptyHint}>아래 버튼으로 음악 파일을 추가하세요</Text>
+          <Icon name="music" size={36} color={colors.light.mutedForeground} />
+          <Text style={styles.emptyTxt}>No tracks on Side {side}</Text>
+          <Text style={styles.emptyHint}>Tap "Add Audio Files" to load songs</Text>
         </View>
       )}
     </View>
@@ -262,6 +288,9 @@ export default function LibraryScreen() {
   };
 
   const handleRemove = (side: Side, trackId: string) => {
+    const items = side === "A" ? sideA : sideB;
+    const track = items.find((it) => it.id === trackId) as TrackItem | undefined;
+    if (!track) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     removeTrackItem(side, trackId);
   };
@@ -271,14 +300,16 @@ export default function LibraryScreen() {
     setEditingNoise({ noise, side });
   };
 
-  const aMs = totalMs(sideA);
-  const bMs = totalMs(sideB);
+  const aItems = sideA;
+  const bItems = sideB;
+  const aPct = Math.min(100, Math.round((totalMs(aItems) / MAX_SIDE_MS) * 100));
+  const bPct = Math.min(100, Math.round((totalMs(bItems) / MAX_SIDE_MS) * 100));
 
   return (
     <View style={[styles.container, { paddingTop: topPad }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.7}>
-          <Icon name="arrow-left" size={22} color={colors.light.mutedForeground} />
+          <Icon name="arrow-left" size={22} color={colors.light.cassetteBeige} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>LIBRARY</Text>
         <View style={styles.iconBtn} />
@@ -287,20 +318,17 @@ export default function LibraryScreen() {
       <View style={styles.tabs}>
         {(["A", "B"] as Side[]).map((s) => {
           const active = tab === s;
-          const ms = s === "A" ? aMs : bMs;
+          const borderC = s === "A" ? "#9e3c3c" : "#2b5499";
+          const pct = s === "A" ? aPct : bPct;
           return (
             <TouchableOpacity
               key={s}
-              style={[styles.tab, active && styles.tabActive]}
+              style={[styles.tab, active && { borderBottomColor: borderC, borderBottomWidth: 2 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); setTab(s); }}
               activeOpacity={0.8}
             >
-              <Text style={[styles.tabText, active && styles.tabTextActive]}>
-                {s} SIDE
-              </Text>
-              <Text style={[styles.tabTime, active && styles.tabTimeActive]}>
-                {formatMs(ms)} / 30:00
-              </Text>
+              <Text style={[styles.tabText, active && styles.activeTabText]}>SIDE {s}</Text>
+              <Text style={[styles.tabPct, active && { color: borderC }]}>{pct}%</Text>
             </TouchableOpacity>
           );
         })}
@@ -314,7 +342,7 @@ export default function LibraryScreen() {
       >
         {tab === "A"
           ? <SidePanel
-              side="A" items={sideA}
+              side="A" items={aItems}
               currentSide={currentSide} currentItemIdx={currentItemIdx}
               isPlaying={isPlaying} isPlayingNoise={isPlayingNoise} isAdding={isAdding}
               onPlayItem={(idx) => handlePlayItem("A", idx)}
@@ -323,7 +351,7 @@ export default function LibraryScreen() {
               onAdd={() => addToSide("A")}
             />
           : <SidePanel
-              side="B" items={sideB}
+              side="B" items={bItems}
               currentSide={currentSide} currentItemIdx={currentItemIdx}
               isPlaying={isPlaying} isPlayingNoise={isPlayingNoise} isAdding={isAdding}
               onPlayItem={(idx) => handlePlayItem("B", idx)}
@@ -347,7 +375,6 @@ export default function LibraryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.light.background },
-
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, paddingVertical: 10,
@@ -357,199 +384,128 @@ const styles = StyleSheet.create({
     color: colors.light.mutedForeground, fontSize: 11,
     fontFamily: "Inter_600SemiBold", letterSpacing: 3,
   },
-
-  tabs: {
-    flexDirection: "row",
-    backgroundColor: colors.light.card,
-    marginHorizontal: 16,
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 8,
-  },
+  tabs: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: colors.light.border },
   tab: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  tabActive: {
-    backgroundColor: colors.light.primary,
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    paddingVertical: 12, gap: 8, borderBottomWidth: 2, borderBottomColor: "transparent",
   },
   tabText: {
-    fontSize: 12,
-    fontFamily: "Inter_700Bold",
-    color: colors.light.mutedForeground,
-    letterSpacing: 1,
+    fontSize: 12, fontFamily: "Inter_600SemiBold",
+    color: colors.light.mutedForeground, letterSpacing: 2,
   },
-  tabTextActive: {
-    color: "#fff",
-  },
-  tabTime: {
-    fontSize: 10,
-    fontFamily: "Inter_400Regular",
-    color: colors.light.mutedForeground,
-    marginTop: 1,
-  },
-  tabTimeActive: {
-    color: "rgba(255,255,255,0.8)",
-  },
-
+  activeTabText: { color: colors.light.cassetteCream },
+  tabPct: { fontSize: 11, fontFamily: "Inter_500Medium", color: colors.light.mutedForeground },
   scroll: { flex: 1 },
-  panel: { paddingHorizontal: 16, paddingTop: 8 },
-
-  tapeBuilderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 8,
+  panel: { paddingHorizontal: 16, paddingTop: 16 },
+  panelHeader: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  sideBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 4 },
+  sideBadgeText: { color: "#fff", fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 2 },
+  panelHeaderRight: {
+    flex: 1, flexDirection: "row", alignItems: "center",
+    justifyContent: "flex-end", gap: 4,
   },
-  tapeBuilderLabel: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-    color: colors.light.text,
-    letterSpacing: 0.5,
-  },
-  tapeTime: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: colors.light.mutedForeground,
-  },
-
-  tapeBar: {
-    height: 5,
-    backgroundColor: colors.light.secondary,
-    borderRadius: 3,
-    overflow: "hidden",
-    marginBottom: 12,
-  },
-  tapeFill: {
-    height: "100%",
-    borderRadius: 3,
-    backgroundColor: colors.light.primary,
+  timeUsed: { color: colors.light.cassetteCream, fontSize: 15, fontFamily: "Inter_700Bold" },
+  timeSep: { color: colors.light.mutedForeground, fontSize: 13 },
+  timeTotal: { color: colors.light.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" },
+  tapeBar: { height: 5, backgroundColor: colors.light.secondary, borderRadius: 3, overflow: "hidden", marginBottom: 6 },
+  tapeFill: { height: "100%", borderRadius: 3 },
+  timeRemaining: {
+    color: colors.light.mutedForeground, fontSize: 11,
+    fontFamily: "Inter_400Regular", marginBottom: 12,
   },
 
   noiseRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 11,
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.light.border,
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingVertical: 7, paddingHorizontal: 4,
+    borderBottomWidth: 1, borderBottomColor: colors.light.border,
+    backgroundColor: "transparent",
   },
-  noiseRowActive: { backgroundColor: "rgba(240,120,40,0.06)" },
-  noiseDash: {
-    color: colors.light.mutedForeground,
-    fontSize: 16,
+  noiseRowActive: { backgroundColor: "rgba(180,140,80,0.08)" },
+  noiseIcon: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: colors.light.card,
+    borderWidth: 1, borderColor: colors.light.border,
+    alignItems: "center", justifyContent: "center",
+  },
+  noiseIconChar: { color: colors.light.mutedForeground, fontSize: 18, fontFamily: "Inter_700Bold", lineHeight: 22 },
+  noiseInfo: { flex: 1 },
+  noiseLabel: {
+    color: colors.light.mutedForeground, fontSize: 10,
+    fontFamily: "Inter_700Bold", letterSpacing: 2,
+  },
+  noiseDur: {
+    color: colors.light.cassetteCream, fontSize: 14,
+    fontFamily: "Inter_600SemiBold", marginTop: 1,
+  },
+  noiseFillDur: {
+    color: colors.light.cassetteBeige, fontSize: 15,
     fontFamily: "Inter_700Bold",
-    width: 16,
-    textAlign: "center",
   },
-  noiseLabelText: {
-    flex: 1,
-    color: colors.light.mutedForeground,
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
+  noiseFillHint: {
+    color: colors.light.mutedForeground, fontSize: 11,
+    fontFamily: "Inter_400Regular", fontStyle: "italic",
   },
-  noiseEditDots: {
-    padding: 4,
-  },
-  dotsText: {
-    color: colors.light.border,
-    fontSize: 14,
-    letterSpacing: 2,
+  editHint: { flexDirection: "row", alignItems: "center", gap: 4 },
+  editHintText: {
+    color: colors.light.mutedForeground, fontSize: 11,
+    fontFamily: "Inter_400Regular", fontStyle: "italic",
   },
 
   trackRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderBottomWidth: 1,
-    borderBottomColor: colors.light.border,
+    flexDirection: "row", alignItems: "center",
+    borderBottomWidth: 1, borderBottomColor: colors.light.border,
   },
-  trackRowActive: { backgroundColor: "rgba(240,120,40,0.06)" },
+  trackRowActive: { backgroundColor: colors.light.secondary },
   trackPlayArea: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingVertical: 13,
-    paddingLeft: 4,
+    flex: 1, flexDirection: "row", alignItems: "center",
+    gap: 12, paddingVertical: 12, paddingLeft: 4,
   },
-  trackDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.light.text,
-    alignItems: "center",
-    justifyContent: "center",
+  trackNum: {
+    width: 34, height: 34, borderRadius: 17,
+    borderWidth: 1, borderColor: colors.light.border,
+    backgroundColor: colors.light.card,
+    alignItems: "center", justifyContent: "center",
   },
-  trackDotActive: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: colors.light.primary,
-  },
+  trackNumText: { color: colors.light.mutedForeground, fontSize: 11, fontFamily: "Inter_500Medium" },
+  trackInfo: { flex: 1 },
   trackName: {
-    flex: 1,
-    color: colors.light.text,
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    letterSpacing: 0.1,
+    color: colors.light.cassetteCream, fontSize: 14,
+    fontFamily: "Inter_500Medium", letterSpacing: 0.2,
   },
-  trackNameActive: {
-    color: colors.light.primary,
-    fontFamily: "Inter_600SemiBold",
-  },
-  trackDurText: {
-    color: colors.light.mutedForeground,
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
+  trackDur: {
+    color: colors.light.mutedForeground, fontSize: 11,
+    fontFamily: "Inter_400Regular", letterSpacing: 0.5, minWidth: 38, textAlign: "right",
   },
   removeBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 14,
-    alignItems: "center",
-    justifyContent: "center",
+    paddingHorizontal: 8, paddingVertical: 14,
+    alignItems: "center", justifyContent: "center",
     minWidth: 40,
   },
 
   addBtn: {
-    marginTop: 20,
-    backgroundColor: colors.light.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    shadowColor: colors.light.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    marginTop: 16, borderWidth: 1.5, borderRadius: 10,
+    paddingVertical: 14, paddingHorizontal: 20, alignItems: "center",
   },
-  addBtnDisabled: { opacity: 0.6 },
+  addBtnDisabled: { opacity: 0.7 },
   addRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  addTxt: { fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" },
-
-  emptyState: { alignItems: "center", paddingVertical: 48, gap: 10 },
-  emptyTxt: { color: colors.light.text, fontSize: 16, fontFamily: "Inter_600SemiBold" },
+  addTxt: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  emptyState: { alignItems: "center", paddingVertical: 40, gap: 10 },
+  emptyTxt: { color: colors.light.cassetteCream, fontSize: 16, fontFamily: "Inter_600SemiBold" },
   emptyHint: { color: colors.light.mutedForeground, fontSize: 13, fontFamily: "Inter_400Regular" },
 
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.35)" },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
   modalSheet: {
     backgroundColor: colors.light.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    paddingBottom: 36,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    paddingHorizontal: 24, paddingTop: 12, paddingBottom: 36,
   },
   modalHandle: {
     width: 40, height: 4, borderRadius: 2,
     backgroundColor: colors.light.border, alignSelf: "center", marginBottom: 20,
   },
   modalTitle: {
-    color: colors.light.text, fontSize: 18,
+    color: colors.light.cassetteCream, fontSize: 18,
     fontFamily: "Inter_700Bold", marginBottom: 4,
   },
   modalSub: {
@@ -558,24 +514,12 @@ const styles = StyleSheet.create({
   },
   presetGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 24 },
   presetBtn: {
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: colors.light.border,
-    backgroundColor: colors.light.background,
-  },
-  presetBtnActive: {
-    backgroundColor: colors.light.primary,
-    borderColor: colors.light.primary,
+    paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8,
+    borderWidth: 1.5, borderColor: colors.light.border,
   },
   presetText: {
-    color: colors.light.text,
-    fontSize: 14,
+    color: colors.light.cassetteCream, fontSize: 14,
     fontFamily: "Inter_600SemiBold",
-  },
-  presetTextActive: {
-    color: "#fff",
   },
   customLabel: {
     color: colors.light.mutedForeground, fontSize: 12,
@@ -583,17 +527,15 @@ const styles = StyleSheet.create({
   },
   customRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
   customInput: {
-    flex: 1, height: 48, borderRadius: 12,
+    flex: 1, height: 46, borderRadius: 10,
     borderWidth: 1.5, borderColor: colors.light.border,
     paddingHorizontal: 14,
-    color: colors.light.text,
-    backgroundColor: colors.light.background,
+    color: colors.light.cassetteCream,
     fontFamily: "Inter_500Medium", fontSize: 15,
   },
   customSaveBtn: {
-    height: 48, paddingHorizontal: 22, borderRadius: 12,
+    height: 46, paddingHorizontal: 20, borderRadius: 10,
     alignItems: "center", justifyContent: "center",
-    backgroundColor: colors.light.primary,
   },
   customSaveTxt: { color: "#fff", fontSize: 14, fontFamily: "Inter_700Bold" },
   modalCloseBtn: { alignItems: "center", paddingVertical: 8 },

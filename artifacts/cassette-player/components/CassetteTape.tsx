@@ -58,8 +58,8 @@ export function CassetteTape({
 
   const labelX = 32 * s, labelY = 122 * s;
   const labelW = 276 * s, labelH = 64 * s;
-  const sideColor = "#cc5c10";
-  const sideBg = "#f07828";
+  const sideColor = side === "A" ? "#7a2d2d" : "#1e3d6e";
+  const sideBg = side === "A" ? "#9e3c3c" : "#2b5499";
 
   return (
     <View style={{ width: W, height: H }}>

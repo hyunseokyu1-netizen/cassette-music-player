@@ -1,41 +1,41 @@
 const colors = {
   light: {
-    text: "#2d1a0a",
-    tint: "#f07828",
+    text: "#2c1a0e",
+    tint: "#8b4513",
 
-    background: "#ede0c8",
-    foreground: "#2d1a0a",
+    background: "#2c1a0e",
+    foreground: "#f5e6c8",
 
-    card: "#f5ead8",
-    cardForeground: "#2d1a0a",
+    card: "#3d2415",
+    cardForeground: "#f5e6c8",
 
-    primary: "#f07828",
-    primaryForeground: "#ffffff",
+    primary: "#d4b483",
+    primaryForeground: "#2c1a0e",
 
-    secondary: "#e0cfb2",
-    secondaryForeground: "#2d1a0a",
+    secondary: "#4a2f1a",
+    secondaryForeground: "#d4b483",
 
-    muted: "#e0cfb2",
-    mutedForeground: "#907050",
+    muted: "#4a2f1a",
+    mutedForeground: "#a0855a",
 
-    accent: "#f07828",
-    accentForeground: "#ffffff",
+    accent: "#8b4513",
+    accentForeground: "#f5e6c8",
 
     destructive: "#c0392b",
     destructiveForeground: "#ffffff",
 
-    border: "#ccb898",
-    input: "#ccb898",
+    border: "#5c3820",
+    input: "#5c3820",
 
     cassetteBrown: "#4a2f1a",
-    cassetteBeige: "#f07828",
-    cassetteCream: "#2d1a0a",
-    cassetteDark: "#2d1a0a",
-    cassetteAccent: "#f07828",
+    cassetteBeige: "#d4b483",
+    cassetteCream: "#f5e6c8",
+    cassetteDark: "#2c1a0e",
+    cassetteAccent: "#8b4513",
     cassetteReel: "#3d2415",
     cassetteReelSpoke: "#6b4423",
     cassetteWindow: "#1a0f07",
-    cassetteLabel: "#f5ead8",
+    cassetteLabel: "#f5e6c8",
     cassetteLabelBorder: "#c9a96e",
     cassetteScrew: "#6b4423",
     tape: "#1a0f07",
