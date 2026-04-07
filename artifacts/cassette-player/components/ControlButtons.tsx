@@ -57,7 +57,7 @@ function PlayButton({
       style={({ pressed }) => [
         styles.playBtn,
         pressed && styles.playBtnPressed,
-        disabled && styles.btnDisabled,
+        disabled && styles.playBtnDisabled,
       ]}
     >
       {isLoading ? (
@@ -107,79 +107,85 @@ export function ControlButtons({
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.row}>
-        <SideButton label="◄◄" onPressIn={startRW} onPressOut={stopRW} disabled={!hasTracks} />
-        <PlayButton
-          isPlaying={isPlaying}
-          isLoading={isLoading}
-          disabled={!hasTracks}
-          onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            onPlayPause();
-          }}
-        />
-        <SideButton label="▶▶" onPressIn={startFF} onPressOut={stopFF} disabled={!hasTracks} />
-      </View>
+    <View style={styles.row}>
+      <SideButton label="◄◄" onPressIn={startRW} onPressOut={stopRW} disabled={!hasTracks} />
+      <PlayButton
+        isPlaying={isPlaying}
+        isLoading={isLoading}
+        disabled={!hasTracks}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onPlayPause();
+        }}
+      />
+      <SideButton label="▶▶" onPressIn={startFF} onPressOut={stopFF} disabled={!hasTracks} />
     </View>
   );
 }
 
+const CARD_BG = colors.light.card;
+const BTN_BG = colors.light.background;
+
 const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
-    backgroundColor: colors.light.card,
-    borderRadius: 40,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: colors.light.border,
+    gap: 16,
+    paddingHorizontal: 24,
   },
 
   sideBtn: {
-    width: 72,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.light.secondary,
+    width: 76,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: BTN_BG,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#8a7a60",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 4,
     borderWidth: 1,
-    borderColor: colors.light.border,
+    borderColor: "rgba(255,255,255,0.7)",
   },
   sideBtnPressed: {
-    backgroundColor: colors.light.muted,
-    transform: [{ scale: 0.96 }],
+    shadowOpacity: 0.06,
+    elevation: 1,
+    transform: [{ scale: 0.97 }],
   },
   sideIcon: {
-    fontSize: 18,
+    fontSize: 17,
     color: colors.light.foreground,
     fontFamily: "Inter_700Bold",
   },
 
   playBtn: {
-    width: 100,
-    height: 54,
-    borderRadius: 27,
+    width: 108,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: colors.light.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: colors.light.primary,
-    shadowOffset: { width: 0, height: 3 },
+    shadowColor: "#C06010",
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 10,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,200,100,0.3)",
   },
   playBtnPressed: {
-    transform: [{ scale: 0.95 }],
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     elevation: 2,
+    transform: [{ scale: 0.96 }],
+  },
+  playBtnDisabled: {
+    backgroundColor: colors.light.muted,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    elevation: 1,
   },
   playIcon: {
     fontSize: 26,
@@ -188,7 +194,9 @@ const styles = StyleSheet.create({
   },
 
   btnDisabled: {
-    opacity: 0.35,
+    opacity: 0.4,
+    shadowOpacity: 0.04,
+    elevation: 1,
   },
   iconDisabled: {
     color: colors.light.mutedForeground,

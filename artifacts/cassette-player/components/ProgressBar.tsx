@@ -41,7 +41,7 @@ export function ProgressBar({ tapePosition }: ProgressBarProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     gap: 8,
   },
   track: {
@@ -63,8 +63,13 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     backgroundColor: colors.light.primary,
-    borderWidth: 2,
-    borderColor: colors.light.background,
+    borderWidth: 2.5,
+    borderColor: colors.light.card,
+    shadowColor: "#C06010",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 3,
   },
   times: {
     flexDirection: "row",

@@ -1,34 +1,34 @@
 const colors = {
   light: {
-    background: "#ebe4d4",
-    foreground: "#2c1a0e",
+    background: "#F5F1EA",
+    foreground: "#2C1A0E",
 
-    card: "#f2ece0",
-    cardForeground: "#2c1a0e",
+    card: "#EDE8DF",
+    cardForeground: "#2C1A0E",
 
-    primary: "#d4824a",
+    primary: "#F28C28",
     primaryForeground: "#ffffff",
 
-    secondary: "#ddd5c0",
+    secondary: "#E0D9CE",
     secondaryForeground: "#5c3820",
 
-    muted: "#ddd5c0",
+    muted: "#E0D9CE",
     mutedForeground: "#7a6040",
 
-    accent: "#d4824a",
+    accent: "#F28C28",
     accentForeground: "#ffffff",
 
     destructive: "#c0392b",
     destructiveForeground: "#ffffff",
 
-    border: "#c4b49a",
-    input: "#c4b49a",
+    border: "#D4C9B4",
+    input: "#D4C9B4",
 
     cassetteBrown: "#1a1816",
-    cassetteBeige: "#d4824a",
+    cassetteBeige: "#F28C28",
     cassetteCream: "#f5f0e4",
     cassetteDark: "#0a0908",
-    cassetteAccent: "#d4824a",
+    cassetteAccent: "#F28C28",
     cassetteReel: "#1e1e1a",
     cassetteReelSpoke: "#b0b0a8",
     cassetteWindow: "#0c0b09",
