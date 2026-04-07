@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import colors from "@/constants/colors";
 
 const TAPE_MS = 30 * 60 * 1000;
+const TRACK_COLOR = "#D8C89A";
 
 interface ProgressBarProps {
   tapePosition: number;
@@ -42,34 +43,34 @@ export function ProgressBar({ tapePosition }: ProgressBarProps) {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 28,
-    gap: 8,
+    gap: 7,
   },
   track: {
-    height: 4,
-    backgroundColor: colors.light.secondary,
-    borderRadius: 2,
+    height: 5,
+    backgroundColor: TRACK_COLOR,
+    borderRadius: 3,
     position: "relative",
     overflow: "visible",
   },
   fill: {
     height: "100%",
     backgroundColor: colors.light.primary,
-    borderRadius: 2,
+    borderRadius: 3,
   },
   thumb: {
     position: "absolute",
     top: -5,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: 15,
+    height: 15,
+    borderRadius: 8,
     backgroundColor: colors.light.primary,
     borderWidth: 2.5,
-    borderColor: colors.light.card,
-    shadowColor: "#C06010",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 3,
+    borderColor: "#ffffff",
+    shadowColor: "#B86010",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    elevation: 4,
   },
   times: {
     flexDirection: "row",

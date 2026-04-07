@@ -12,63 +12,6 @@ interface ControlButtonsProps {
   onRewind: (seconds: number) => void;
 }
 
-function SideButton({
-  label,
-  onPressIn,
-  onPressOut,
-  disabled,
-}: {
-  label: string;
-  onPressIn?: () => void;
-  onPressOut?: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <Pressable
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
-      disabled={disabled}
-      style={({ pressed }) => [
-        styles.sideBtn,
-        pressed && styles.sideBtnPressed,
-        disabled && styles.btnDisabled,
-      ]}
-    >
-      <Text style={[styles.sideIcon, disabled && styles.iconDisabled]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function PlayButton({
-  isPlaying,
-  isLoading,
-  disabled,
-  onPress,
-}: {
-  isPlaying: boolean;
-  isLoading: boolean;
-  disabled?: boolean;
-  onPress?: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [
-        styles.playBtn,
-        pressed && styles.playBtnPressed,
-        disabled && styles.playBtnDisabled,
-      ]}
-    >
-      {isLoading ? (
-        <ActivityIndicator size="small" color="#ffffff" />
-      ) : (
-        <Text style={styles.playIcon}>{isPlaying ? "‖" : "▶"}</Text>
-      )}
-    </Pressable>
-  );
-}
-
 export function ControlButtons({
   isPlaying, isLoading, hasTracks,
   onPlayPause, onFastForward, onRewind,
@@ -106,86 +49,111 @@ export function ControlButtons({
     if (rwRef.current) { clearInterval(rwRef.current); rwRef.current = null; }
   };
 
+  const disabled = !hasTracks;
+
   return (
-    <View style={styles.row}>
-      <SideButton label="◄◄" onPressIn={startRW} onPressOut={stopRW} disabled={!hasTracks} />
-      <PlayButton
-        isPlaying={isPlaying}
-        isLoading={isLoading}
-        disabled={!hasTracks}
+    <View style={styles.strip}>
+
+      {/* REW */}
+      <Pressable
+        onPressIn={startRW}
+        onPressOut={stopRW}
+        disabled={disabled}
+        style={({ pressed }) => [styles.sideZone, pressed && styles.sideZonePressed]}
+      >
+        <Text style={[styles.sideIcon, disabled && styles.iconDisabled]}>◄◄</Text>
+      </Pressable>
+
+      {/* PLAY / PAUSE */}
+      <Pressable
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           onPlayPause();
         }}
-      />
-      <SideButton label="▶▶" onPressIn={startFF} onPressOut={stopFF} disabled={!hasTracks} />
+        disabled={disabled}
+        style={({ pressed }) => [
+          styles.playBtn,
+          pressed && styles.playBtnPressed,
+          disabled && styles.playBtnDisabled,
+        ]}
+      >
+        {isLoading
+          ? <ActivityIndicator size="small" color="#fff" />
+          : <Text style={styles.playIcon}>{isPlaying ? "‖" : "▶"}</Text>
+        }
+      </Pressable>
+
+      {/* FF */}
+      <Pressable
+        onPressIn={startFF}
+        onPressOut={stopFF}
+        disabled={disabled}
+        style={({ pressed }) => [styles.sideZone, pressed && styles.sideZonePressed]}
+      >
+        <Text style={[styles.sideIcon, disabled && styles.iconDisabled]}>▶▶</Text>
+      </Pressable>
+
     </View>
   );
 }
 
-const CARD_BG = colors.light.card;
-const BTN_BG = colors.light.background;
-
 const styles = StyleSheet.create({
-  row: {
+  strip: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 16,
-    paddingHorizontal: 24,
+    marginHorizontal: 20,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 40,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    shadowColor: "#A09070",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.9)",
   },
 
-  sideBtn: {
-    width: 76,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: BTN_BG,
+  sideZone: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#8a7a60",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.7)",
+    height: 54,
+    borderRadius: 27,
   },
-  sideBtnPressed: {
-    shadowOpacity: 0.06,
-    elevation: 1,
-    transform: [{ scale: 0.97 }],
+  sideZonePressed: {
+    backgroundColor: "rgba(0,0,0,0.04)",
   },
   sideIcon: {
-    fontSize: 17,
+    fontSize: 16,
     color: colors.light.foreground,
     fontFamily: "Inter_700Bold",
+    opacity: 0.7,
   },
 
   playBtn: {
-    width: 108,
-    height: 60,
-    borderRadius: 30,
+    width: 110,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: colors.light.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#C06010",
+    shadowColor: "#B86010",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 10,
     elevation: 8,
-    borderWidth: 1,
-    borderColor: "rgba(255,200,100,0.3)",
   },
   playBtnPressed: {
-    shadowOpacity: 0.15,
-    elevation: 2,
-    transform: [{ scale: 0.96 }],
+    transform: [{ scale: 0.95 }],
+    shadowOpacity: 0.2,
+    elevation: 3,
   },
   playBtnDisabled: {
-    backgroundColor: colors.light.muted,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    elevation: 1,
+    backgroundColor: "#D8CEBC",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   playIcon: {
     fontSize: 26,
@@ -193,12 +161,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
   },
 
-  btnDisabled: {
-    opacity: 0.4,
-    shadowOpacity: 0.04,
-    elevation: 1,
-  },
   iconDisabled: {
-    color: colors.light.mutedForeground,
+    opacity: 0.3,
   },
 });

@@ -1,9 +1,9 @@
 const colors = {
   light: {
     background: "#F5F1EA",
-    foreground: "#2C1A0E",
+    foreground: "#3A2E2A",
 
-    card: "#EDE8DF",
+    card: "#F0EAE0",
     cardForeground: "#2C1A0E",
 
     primary: "#F28C28",
