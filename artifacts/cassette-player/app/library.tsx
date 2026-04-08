@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Icon } from "@/components/Icon";
+import { PaperBackground } from "@/components/PaperBackground";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
 import { SideItem, TrackItem, NoiseItem, Side, MAX_SIDE_MS } from "@/hooks/useAudioPlayer";
 import colors from "@/constants/colors";
@@ -306,7 +307,7 @@ export default function LibraryScreen() {
   const bPct = Math.min(100, Math.round((totalMs(bItems) / MAX_SIDE_MS) * 100));
 
   return (
-    <View style={[styles.container, { paddingTop: topPad }]}>
+    <PaperBackground style={[styles.container, { paddingTop: topPad }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.7}>
           <Icon name="arrow-left" size={22} color={colors.light.iconColor} />
@@ -369,12 +370,12 @@ export default function LibraryScreen() {
         onSave={updateNoiseDuration}
         onClose={() => setEditingNoise(null)}
       />
-    </View>
+    </PaperBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.light.background },
+  container: { flex: 1 },
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, paddingVertical: 10,

@@ -11,6 +11,7 @@ import * as Haptics from "expo-haptics";
 import { CassetteTape } from "@/components/CassetteTape";
 import { ControlButtons } from "@/components/ControlButtons";
 import { ProgressBar } from "@/components/ProgressBar";
+import { PaperBackground } from "@/components/PaperBackground";
 import { Icon } from "@/components/Icon";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
 import { TrackItem } from "@/hooks/useAudioPlayer";
@@ -59,7 +60,7 @@ export default function PlayerScreen() {
   }, [activeItems, currentItemIdx, position]);
 
   return (
-    <View style={[styles.container, { paddingTop: topPad, paddingBottom: bottomPad }]}>
+    <PaperBackground style={[styles.container, { paddingTop: topPad, paddingBottom: bottomPad }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.push("/library")} style={styles.btn} activeOpacity={0.7}>
           <Icon name="list" size={22} color={colors.light.iconColor} />
@@ -125,16 +126,16 @@ export default function PlayerScreen() {
 
       <View style={styles.footer}>
         <TouchableOpacity onPress={handleFlip} style={styles.flipBtn} activeOpacity={0.8} disabled={isPlayingNoise}>
-          <Icon name="refresh-cw" size={13} color={colors.light.cassetteDark} />
+          <Icon name="refresh-cw" size={13} color={colors.light.iconColor} />
           <Text style={styles.flipText}>FLIP TO SIDE {currentSide === "A" ? "B" : "A"}</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </PaperBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.light.background },
+  container: { flex: 1 },
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, paddingVertical: 10,
