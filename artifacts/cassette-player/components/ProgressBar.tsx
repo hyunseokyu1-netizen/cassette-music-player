@@ -41,7 +41,7 @@ export function ProgressBar({ tapePosition }: ProgressBarProps) {
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 28,
+    paddingHorizontal: 24,
     gap: 8,
   },
   track: {
@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   },
   fill: {
     height: "100%",
-    backgroundColor: colors.light.primary,
+    backgroundColor: colors.light.cassetteBeige,
     borderRadius: 2,
   },
   thumb: {
@@ -62,14 +62,9 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: colors.light.primary,
-    borderWidth: 2.5,
-    borderColor: colors.light.card,
-    shadowColor: "#C06010",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-    elevation: 3,
+    backgroundColor: colors.light.cassetteBeige,
+    borderWidth: 2,
+    borderColor: colors.light.cassetteLabelBorder,
   },
   times: {
     flexDirection: "row",
@@ -82,7 +77,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   remaining: {
-    color: colors.light.foreground,
-    fontFamily: "Inter_600SemiBold",
+    color: colors.light.cassetteBeige,
   },
 });
