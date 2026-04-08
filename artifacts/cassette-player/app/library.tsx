@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import * as Haptics from "expo-haptics";
 import { Icon } from "@/components/Icon";
-import { PaperBackground } from "@/components/PaperBackground";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
 import { SideItem, TrackItem, NoiseItem, Side, MAX_SIDE_MS } from "@/hooks/useAudioPlayer";
 import colors from "@/constants/colors";
@@ -209,13 +208,13 @@ function SidePanel({
                 <View style={[styles.trackNum, isPlayingThis && { backgroundColor: sideColor, borderColor: sideColor }]}>
                   {isPlayingThis
                     ? <Icon name="volume-2" size={13} color="#fff" />
-                    : <Text style={[styles.trackNumText, isActive && { color: colors.light.primary }]}>
+                    : <Text style={[styles.trackNumText, isActive && { color: colors.light.cassetteBeige }]}>
                         {trackNum.toString().padStart(2, "0")}
                       </Text>
                   }
                 </View>
                 <View style={styles.trackInfo}>
-                  <Text style={[styles.trackName, isActive && { color: colors.light.primary }]} numberOfLines={1}>
+                  <Text style={[styles.trackName, isActive && { color: colors.light.cassetteBeige }]} numberOfLines={1}>
                     {item.title}
                   </Text>
                 </View>
@@ -307,10 +306,10 @@ export default function LibraryScreen() {
   const bPct = Math.min(100, Math.round((totalMs(bItems) / MAX_SIDE_MS) * 100));
 
   return (
-    <PaperBackground style={[styles.container, { paddingTop: topPad }]}>
+    <View style={[styles.container, { paddingTop: topPad }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} activeOpacity={0.7}>
-          <Icon name="arrow-left" size={22} color={colors.light.iconColor} />
+          <Icon name="arrow-left" size={22} color={colors.light.cassetteBeige} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>LIBRARY</Text>
         <View style={styles.iconBtn} />
@@ -370,12 +369,12 @@ export default function LibraryScreen() {
         onSave={updateNoiseDuration}
         onClose={() => setEditingNoise(null)}
       />
-    </PaperBackground>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.light.background },
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, paddingVertical: 10,
@@ -394,7 +393,7 @@ const styles = StyleSheet.create({
     fontSize: 12, fontFamily: "Inter_600SemiBold",
     color: colors.light.mutedForeground, letterSpacing: 2,
   },
-  activeTabText: { color: colors.light.foreground },
+  activeTabText: { color: colors.light.cassetteCream },
   tabPct: { fontSize: 11, fontFamily: "Inter_500Medium", color: colors.light.mutedForeground },
   scroll: { flex: 1 },
   panel: { paddingHorizontal: 16, paddingTop: 16 },

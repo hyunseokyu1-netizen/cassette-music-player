@@ -12,78 +12,58 @@ interface ControlButtonsProps {
   onRewind: (seconds: number) => void;
 }
 
-const PANEL_BG = "#EAE2D8";
-const BTN_BG = "#E2D9CE";
-const BTN_SHADOW = "#C4B8A8";
-const BTN_HIGHLIGHT = "#F5F0E8";
-const BTN_ACTIVE_BG = "#c47a38";
-const BTN_ACTIVE_SHADOW = "#9a5c20";
-const BTN_ACTIVE_HIGHLIGHT = "#e8a060";
-const LABEL_COLOR = "#6b4a2e";
-const LABEL_ACTIVE = "#ffffff";
-const LABEL_DISABLED = "#C4B8A8";
-
-function DeckButton({
+function SideButton({
   label,
-  subLabel,
-  onPress,
   onPressIn,
   onPressOut,
-  active,
   disabled,
-  isLoading,
-  size,
 }: {
   label: string;
-  subLabel: string;
-  onPress?: () => void;
   onPressIn?: () => void;
   onPressOut?: () => void;
-  active?: boolean;
   disabled?: boolean;
-  isLoading?: boolean;
-  size?: "normal" | "large";
 }) {
-  const isLarge = size === "large";
   return (
     <Pressable
-      onPress={onPress}
       onPressIn={onPressIn}
       onPressOut={onPressOut}
       disabled={disabled}
       style={({ pressed }) => [
-        styles.button,
-        isLarge && styles.buttonLarge,
-        pressed && styles.buttonPressed,
-        active && styles.buttonActive,
-        disabled && styles.buttonDisabled,
+        styles.sideBtn,
+        pressed && styles.sideBtnPressed,
+        disabled && styles.btnDisabled,
       ]}
     >
-      {({ pressed }) => (
-        <View style={styles.buttonInner}>
-          {isLoading ? (
-            <ActivityIndicator size="small" color={BTN_ACTIVE_BG} />
-          ) : (
-            <>
-              <Text style={[
-                styles.label,
-                isLarge && styles.labelLarge,
-                active && styles.labelActive,
-                pressed && !disabled && styles.labelPressed,
-                disabled && styles.labelDisabled,
-              ]}>
-                {label}
-              </Text>
-              <Text style={[
-                styles.subLabel,
-                active && styles.subLabelActive,
-                disabled && styles.subLabelDisabled,
-              ]}>
-                {subLabel}
-              </Text>
-            </>
-          )}
-        </View>
+      <Text style={[styles.sideIcon, disabled && styles.iconDisabled]}>{label}</Text>
+    </Pressable>
+  );
+}
+
+function PlayButton({
+  isPlaying,
+  isLoading,
+  disabled,
+  onPress,
+}: {
+  isPlaying: boolean;
+  isLoading: boolean;
+  disabled?: boolean;
+  onPress?: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.playBtn,
+        pressed && styles.playBtnPressed,
+        disabled && styles.playBtnDisabled,
+      ]}
+    >
+      {isLoading ? (
+        <ActivityIndicator size="small" color="#ffffff" />
+      ) : (
+        <Text style={styles.playIcon}>{isPlaying ? "‖" : "▶"}</Text>
       )}
     </Pressable>
   );
@@ -127,157 +107,98 @@ export function ControlButtons({
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.panel}>
-        <View style={styles.row}>
-          <DeckButton
-            label="◄◄"
-            subLabel="REW"
-            onPressIn={startRW}
-            onPressOut={stopRW}
-            disabled={!hasTracks}
-          />
-          <DeckButton
-            label={isPlaying ? "‖" : "▶"}
-            subLabel={isPlaying ? "PAUSE" : "PLAY"}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              onPlayPause();
-            }}
-            active={isPlaying}
-            disabled={!hasTracks}
-            isLoading={isLoading}
-            size="large"
-          />
-          <DeckButton
-            label="▶▶"
-            subLabel="FF"
-            onPressIn={startFF}
-            onPressOut={stopFF}
-            disabled={!hasTracks}
-          />
-        </View>
-      </View>
+    <View style={styles.row}>
+      <SideButton label="◄◄" onPressIn={startRW} onPressOut={stopRW} disabled={!hasTracks} />
+      <PlayButton
+        isPlaying={isPlaying}
+        isLoading={isLoading}
+        disabled={!hasTracks}
+        onPress={() => {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          onPlayPause();
+        }}
+      />
+      <SideButton label="▶▶" onPressIn={startFF} onPressOut={stopFF} disabled={!hasTracks} />
     </View>
   );
 }
 
+const CARD_BG = colors.light.card;
+const BTN_BG = colors.light.background;
+
 const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    paddingHorizontal: 24,
-  },
-  panel: {
-    backgroundColor: PANEL_BG,
-    borderRadius: 20,
-    paddingVertical: 16,
-    paddingHorizontal: 28,
-    width: "100%",
-    shadowColor: "#A09080",
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
-    borderTopWidth: 1,
-    borderLeftWidth: 1,
-    borderTopColor: BTN_HIGHLIGHT,
-    borderLeftColor: BTN_HIGHLIGHT,
-    borderBottomWidth: 1,
-    borderRightWidth: 1,
-    borderBottomColor: "#C8BBAA",
-    borderRightColor: "#C8BBAA",
-  },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 16,
+    paddingHorizontal: 24,
   },
 
-  button: {
-    width: 72,
-    height: 62,
-    borderRadius: 14,
+  sideBtn: {
+    width: 76,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: BTN_BG,
-    borderTopWidth: 1.5,
-    borderLeftWidth: 1.5,
-    borderTopColor: BTN_HIGHLIGHT,
-    borderLeftColor: BTN_HIGHLIGHT,
-    borderBottomWidth: 2,
-    borderRightWidth: 2,
-    borderBottomColor: BTN_SHADOW,
-    borderRightColor: BTN_SHADOW,
-    shadowColor: "#A09080",
-    shadowOffset: { width: 2, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  buttonLarge: {
-    width: 90,
-    height: 76,
-    borderRadius: 18,
-  },
-  buttonPressed: {
-    borderTopColor: BTN_SHADOW,
-    borderLeftColor: BTN_SHADOW,
-    borderBottomColor: BTN_HIGHLIGHT,
-    borderRightColor: BTN_HIGHLIGHT,
-    transform: [{ translateY: 1 }],
-    shadowOffset: { width: 1, height: 1 },
-    shadowOpacity: 0.1,
-    elevation: 1,
-  },
-  buttonActive: {
-    backgroundColor: BTN_ACTIVE_BG,
-    borderTopColor: BTN_ACTIVE_HIGHLIGHT,
-    borderLeftColor: BTN_ACTIVE_HIGHLIGHT,
-    borderBottomColor: BTN_ACTIVE_SHADOW,
-    borderRightColor: BTN_ACTIVE_SHADOW,
-  },
-  buttonDisabled: {
-    opacity: 0.45,
-  },
-
-  buttonInner: {
-    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    shadowColor: "#8a7a60",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.7)",
+  },
+  sideBtnPressed: {
+    shadowOpacity: 0.06,
+    elevation: 1,
+    transform: [{ scale: 0.97 }],
+  },
+  sideIcon: {
+    fontSize: 17,
+    color: colors.light.foreground,
+    fontFamily: "Inter_700Bold",
   },
 
-  label: {
-    fontSize: 20,
-    color: LABEL_COLOR,
+  playBtn: {
+    width: 108,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.light.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#C06010",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,200,100,0.3)",
+  },
+  playBtnPressed: {
+    shadowOpacity: 0.15,
+    elevation: 2,
+    transform: [{ scale: 0.96 }],
+  },
+  playBtnDisabled: {
+    backgroundColor: colors.light.muted,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    elevation: 1,
+  },
+  playIcon: {
+    fontSize: 26,
+    color: "#ffffff",
     fontFamily: "Inter_700Bold",
-    lineHeight: 24,
-  },
-  labelLarge: {
-    fontSize: 28,
-    lineHeight: 32,
-  },
-  labelActive: {
-    color: LABEL_ACTIVE,
-  },
-  labelPressed: {
-    opacity: 0.7,
-  },
-  labelDisabled: {
-    color: LABEL_DISABLED,
   },
 
-  subLabel: {
-    fontSize: 8,
-    color: LABEL_COLOR,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 1.5,
-    opacity: 0.55,
+  btnDisabled: {
+    opacity: 0.4,
+    shadowOpacity: 0.04,
+    elevation: 1,
   },
-  subLabelActive: {
-    color: LABEL_ACTIVE,
-    opacity: 0.85,
-  },
-  subLabelDisabled: {
-    color: LABEL_DISABLED,
+  iconDisabled: {
+    color: colors.light.mutedForeground,
   },
 });

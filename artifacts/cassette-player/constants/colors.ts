@@ -1,46 +1,41 @@
 const colors = {
   light: {
-    text: "#2c1a0e",
-    tint: "#8b4513",
-
     background: "#F5F1EA",
-    foreground: "#2c1a0e",
+    foreground: "#2C1A0E",
 
-    card: "#F2EAE1",
-    cardForeground: "#2c1a0e",
+    card: "#EDE8DF",
+    cardForeground: "#2C1A0E",
 
-    primary: "#8b4513",
+    primary: "#F28C28",
     primaryForeground: "#ffffff",
 
-    secondary: "#E8DFD5",
+    secondary: "#E0D9CE",
     secondaryForeground: "#5c3820",
 
-    muted: "#EFE7DC",
-    mutedForeground: "#7a5c3a",
+    muted: "#E0D9CE",
+    mutedForeground: "#7a6040",
 
-    accent: "#9b5928",
+    accent: "#F28C28",
     accentForeground: "#ffffff",
 
     destructive: "#c0392b",
     destructiveForeground: "#ffffff",
 
-    border: "#D4C4B0",
-    input: "#D4C4B0",
+    border: "#D4C9B4",
+    input: "#D4C9B4",
 
-    cassetteBrown: "#4a2f1a",
-    cassetteBeige: "#d4b483",
-    cassetteCream: "#f5e6c8",
-    cassetteDark: "#2c1a0e",
-    cassetteAccent: "#8b4513",
-    cassetteReel: "#3d2415",
-    cassetteReelSpoke: "#6b4423",
-    cassetteWindow: "#1a0f07",
-    cassetteLabel: "#f5e6c8",
-    cassetteLabelBorder: "#c9a96e",
-    cassetteScrew: "#6b4423",
+    cassetteBrown: "#1a1816",
+    cassetteBeige: "#F28C28",
+    cassetteCream: "#f5f0e4",
+    cassetteDark: "#0a0908",
+    cassetteAccent: "#F28C28",
+    cassetteReel: "#1e1e1a",
+    cassetteReelSpoke: "#b0b0a8",
+    cassetteWindow: "#0c0b09",
+    cassetteLabel: "#f5f0e4",
+    cassetteLabelBorder: "#c8a870",
+    cassetteScrew: "#a09888",
     tape: "#1a0f07",
-
-    iconColor: "#5c3820",
   },
   radius: 6,
 };

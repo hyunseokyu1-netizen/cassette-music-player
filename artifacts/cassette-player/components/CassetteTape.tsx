@@ -27,192 +27,246 @@ export function CassetteTape({
   const scale = width / 340;
   const H = Math.round(200 * scale);
   const W = width;
-
   const s = scale;
 
   const leftRadius = MIN_SPOOL_R + (1 - progress) * (MAX_SPOOL_R - MIN_SPOOL_R);
   const rightRadius = MIN_SPOOL_R + progress * (MAX_SPOOL_R - MIN_SPOOL_R);
 
   const leftSpoolCX = 107 * s;
-  const leftSpoolCY = 53 * s;
+  const leftSpoolCY = 107 * s;
   const rightSpoolCX = 233 * s;
-  const rightSpoolCY = 53 * s;
+  const rightSpoolCY = 107 * s;
 
-  const winX = 56 * s, winY = 11 * s;
-  const winW = 228 * s, winH = 100 * s;
-  const winR = 9 * s;
-  const winBotY = winY + winH;
+  const labelX = 26 * s, labelY = 8 * s;
+  const labelW = 288 * s, labelH = 52 * s;
+
+  const winX = 28 * s, winY = 65 * s;
+  const winW = 284 * s, winH = 92 * s;
+  const winR = 6 * s;
 
   const guideR = 5 * s;
-  const leftGuideX = winX + 16 * s;
-  const rightGuideX = winX + winW - 16 * s;
-  const guideY = winY + winH - 18 * s;
+  const leftGuideX = winX + 20 * s;
+  const rightGuideX = winX + winW - 20 * s;
+  const guideY = winY + winH - 14 * s;
 
   const screwR = 6 * s;
   const screws = [
-    { x: 17 * s, y: 16 * s },
-    { x: 323 * s, y: 16 * s },
-    { x: 17 * s, y: 184 * s },
-    { x: 323 * s, y: 184 * s },
+    { x: 14 * s, y: 14 * s },
+    { x: 326 * s, y: 14 * s },
+    { x: 14 * s, y: 186 * s },
+    { x: 326 * s, y: 186 * s },
   ];
 
-  const labelX = 32 * s, labelY = 122 * s;
-  const labelW = 276 * s, labelH = 64 * s;
-  const sideColor = side === "A" ? "#7a2d2d" : "#1e3d6e";
-  const sideBg = side === "A" ? "#9e3c3c" : "#2b5499";
+  const mechY = winY + winH + 6 * s;
+  const holes = [
+    { x: 70 * s }, { x: 110 * s }, { x: 170 * s }, { x: 230 * s }, { x: 270 * s },
+  ];
+
+  const sideColor = side === "A" ? "#9e3c3c" : "#2b5499";
+  const sideLightColor = side === "A" ? "#c05050" : "#3a6abb";
 
   return (
     <View style={{ width: W, height: H }}>
       <Svg width={W} height={H}>
         <Defs>
-          <LinearGradient id="bodyGrad" x1="0" y1="0" x2="0.3" y2="1">
-            <Stop offset="0%" stopColor="#2e1608" />
-            <Stop offset="40%" stopColor="#1c0e04" />
-            <Stop offset="100%" stopColor="#120903" />
+          <LinearGradient id="bodyGrad" x1="0" y1="0" x2="0.2" y2="1">
+            <Stop offset="0%" stopColor="#242220" />
+            <Stop offset="35%" stopColor="#1a1816" />
+            <Stop offset="100%" stopColor="#121010" />
           </LinearGradient>
-          <LinearGradient id="bodyEdge" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#3d2010" stopOpacity="0.8" />
-            <Stop offset="100%" stopColor="#0d0602" stopOpacity="0.8" />
+          <LinearGradient id="bodySheen" x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0%" stopColor="rgba(255,255,255,0.04)" />
+            <Stop offset="50%" stopColor="rgba(255,255,255,0.0)" />
+            <Stop offset="100%" stopColor="rgba(255,255,255,0.02)" />
+          </LinearGradient>
+          <LinearGradient id="labelGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="#f8f3e8" />
+            <Stop offset="100%" stopColor="#ece5d5" />
           </LinearGradient>
           <LinearGradient id="winGrad" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#100804" />
-            <Stop offset="100%" stopColor="#080401" />
+            <Stop offset="0%" stopColor="#0e0d0b" />
+            <Stop offset="100%" stopColor="#090807" />
           </LinearGradient>
           <LinearGradient id="winGlass" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="rgba(255,200,130,0.08)" />
-            <Stop offset="35%" stopColor="rgba(255,200,130,0)" />
+            <Stop offset="0%" stopColor="rgba(255,220,150,0.06)" />
+            <Stop offset="40%" stopColor="rgba(0,0,0,0)" />
           </LinearGradient>
           <LinearGradient id="screwGrad" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0%" stopColor="#6b4020" />
-            <Stop offset="100%" stopColor="#2c1408" />
+            <Stop offset="0%" stopColor="#b8b0a0" />
+            <Stop offset="50%" stopColor="#888078" />
+            <Stop offset="100%" stopColor="#605850" />
           </LinearGradient>
-          <RadialGradient id="labelGrad" cx="50%" cy="50%" r="75%">
-            <Stop offset="0%" stopColor="#f0e0c0" />
-            <Stop offset="100%" stopColor="#e8d4a8" />
+          <LinearGradient id="guideGrad" x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0%" stopColor="#a09888" />
+            <Stop offset="100%" stopColor="#504840" />
+          </LinearGradient>
+          <RadialGradient id="screwRad" cx="35%" cy="35%" r="65%">
+            <Stop offset="0%" stopColor="#c0b8a8" />
+            <Stop offset="100%" stopColor="#585050" />
           </RadialGradient>
         </Defs>
 
-        <Rect x={1} y={1} width={W - 2} height={H - 2} rx={15 * s} ry={15 * s}
-          fill="url(#bodyGrad)" stroke="#4a2810" strokeWidth={2} />
+        {/* Main body */}
+        <Rect x={1} y={1} width={W - 2} height={H - 2} rx={13 * s} ry={13 * s}
+          fill="url(#bodyGrad)" stroke="#2e2c28" strokeWidth={1.5} />
 
-        <Rect x={6 * s} y={6 * s} width={W - 12 * s} height={H - 12 * s}
-          rx={11 * s} ry={11 * s} fill="none"
-          stroke="rgba(255,180,80,0.06)" strokeWidth={1} />
+        {/* Body sheen */}
+        <Rect x={1} y={1} width={W - 2} height={H - 2} rx={13 * s} ry={13 * s}
+          fill="url(#bodySheen)" />
 
-        <Rect x={winX} y={winY} width={winW} height={winH} rx={winR} ry={winR}
-          fill="url(#winGrad)" stroke="#3d1f08" strokeWidth={2.5} />
+        {/* Label background */}
+        <Rect x={labelX} y={labelY} width={labelW} height={labelH}
+          rx={4 * s} ry={4 * s}
+          fill="url(#labelGrad)" stroke="#c8bfa8" strokeWidth={0.8} />
 
-        <Rect x={winX + 2} y={winY + 2} width={winW - 4} height={winH / 2}
-          rx={winR - 2} ry={winR - 2} fill="url(#winGlass)" />
+        {/* Label top stripe (side color) */}
+        <Rect x={labelX} y={labelY} width={labelW} height={10 * s}
+          rx={4 * s} ry={4 * s} fill={sideColor} opacity={0.85} />
+        <Rect x={labelX} y={labelY + 6 * s} width={labelW} height={4 * s} fill={sideColor} opacity={0.85} />
 
-        <Rect x={winX + 1} y={winY + 1} width={winW - 2} height={winH - 2}
+        {/* Label ruling lines */}
+        <Line x1={labelX + 8 * s} y1={labelY + 28 * s}
+          x2={labelX + labelW - 8 * s} y2={labelY + 28 * s}
+          stroke="rgba(120,100,60,0.25)" strokeWidth={0.6} />
+        <Line x1={labelX + 8 * s} y1={labelY + 38 * s}
+          x2={labelX + labelW - 8 * s} y2={labelY + 38 * s}
+          stroke="rgba(120,100,60,0.18)" strokeWidth={0.5} />
+
+        {/* Side indicator pill on label */}
+        <Rect x={labelX + 8 * s} y={labelY + 14 * s}
+          width={22 * s} height={26 * s} rx={3 * s} ry={3 * s}
+          fill={sideLightColor} opacity={0.9} />
+
+        {/* "90" tape length indicator on right */}
+        <Rect x={labelX + labelW - 32 * s} y={labelY + 14 * s}
+          width={24 * s} height={26 * s} rx={3 * s} ry={3 * s}
+          fill="rgba(0,0,0,0.08)" />
+
+        {/* Window opening */}
+        <Rect x={winX} y={winY} width={winW} height={winH}
+          rx={winR} ry={winR}
+          fill="url(#winGrad)" stroke="#0a0908" strokeWidth={2} />
+
+        {/* Window inner bevel */}
+        <Rect x={winX + 2} y={winY + 2} width={winW - 4} height={winH - 4}
           rx={winR - 1} ry={winR - 1} fill="none"
-          stroke="rgba(255,180,80,0.12)" strokeWidth={0.8} />
+          stroke="rgba(255,200,100,0.06)" strokeWidth={1} />
 
-        <Path
-          d={`M ${leftGuideX + guideR * 1.5} ${guideY} L ${rightGuideX - guideR * 1.5} ${guideY}`}
-          stroke="#0d0703" strokeWidth={3 * s} strokeLinecap="round" opacity={0.9}
-        />
-        <Path
-          d={`M ${leftGuideX + guideR * 1.5} ${guideY} L ${rightGuideX - guideR * 1.5} ${guideY}`}
-          stroke="rgba(120,70,20,0.3)" strokeWidth={1.5 * s} strokeLinecap="round"
-        />
+        {/* Window glass sheen */}
+        <Rect x={winX + 2} y={winY + 2} width={winW - 4} height={winH / 3}
+          rx={winR - 1} ry={winR - 1} fill="url(#winGlass)" />
 
+        {/* Window outer bevel (light top edge) */}
+        <Path
+          d={`M ${winX + winR} ${winY} L ${winX + winW - winR} ${winY}`}
+          stroke="rgba(255,255,255,0.08)" strokeWidth={1.2} strokeLinecap="round" />
+
+        {/* Tape path line */}
+        <Path
+          d={`M ${leftGuideX + guideR * 1.6} ${guideY} L ${rightGuideX - guideR * 1.6} ${guideY}`}
+          stroke="#1a1208" strokeWidth={3.5 * s} strokeLinecap="round" opacity={0.95} />
+        <Path
+          d={`M ${leftGuideX + guideR * 1.6} ${guideY} L ${rightGuideX - guideR * 1.6} ${guideY}`}
+          stroke="rgba(140,90,30,0.25)" strokeWidth={1.5 * s} strokeLinecap="round" />
+
+        {/* Guide rollers */}
         <Circle cx={leftGuideX} cy={guideY} r={guideR}
-          fill="#241208" stroke="#4a2810" strokeWidth={1.2} />
-        <Circle cx={leftGuideX} cy={guideY} r={guideR * 0.45} fill="#4a2810" />
-
+          fill="url(#guideGrad)" stroke="#303028" strokeWidth={1} />
+        <Circle cx={leftGuideX} cy={guideY} r={guideR * 0.42} fill="#282420" />
         <Circle cx={rightGuideX} cy={guideY} r={guideR}
-          fill="#241208" stroke="#4a2810" strokeWidth={1.2} />
-        <Circle cx={rightGuideX} cy={guideY} r={guideR * 0.45} fill="#4a2810" />
+          fill="url(#guideGrad)" stroke="#303028" strokeWidth={1} />
+        <Circle cx={rightGuideX} cy={guideY} r={guideR * 0.42} fill="#282420" />
 
-        {[{ x: W / 2 - 9 * s, y: 5 * s }, { x: W / 2 + 9 * s, y: 5 * s }].map((h, i) => (
-          <Ellipse key={i} cx={h.x} cy={h.y} rx={5 * s} ry={4 * s}
-            fill="#0d0602" stroke="#2e1608" strokeWidth={1} />
+        {/* Mechanism area below window */}
+        {/* Center notch / head gap */}
+        <Rect x={W / 2 - 18 * s} y={mechY} width={36 * s} height={20 * s}
+          rx={3 * s} ry={3 * s} fill="#0a0908" stroke="#252320" strokeWidth={1} />
+
+        {/* Drive spindle access holes */}
+        {holes.map((h, i) => (
+          <Ellipse key={i} cx={h.x} cy={mechY + 10 * s} rx={6 * s} ry={7 * s}
+            fill="#0a0908" stroke="#252320" strokeWidth={1} />
         ))}
 
+        {/* Corner screws */}
         {screws.map((sc, i) => (
           <G key={i}>
             <Circle cx={sc.x} cy={sc.y} r={screwR}
-              fill="url(#screwGrad)" stroke="#5a3018" strokeWidth={1} />
-            <Line x1={sc.x - screwR * 0.55} y1={sc.y - screwR * 0.55}
-              x2={sc.x + screwR * 0.55} y2={sc.y + screwR * 0.55}
-              stroke="#1a0a04" strokeWidth={1.2} strokeLinecap="round" />
-            <Line x1={sc.x + screwR * 0.55} y1={sc.y - screwR * 0.55}
-              x2={sc.x - screwR * 0.55} y2={sc.y + screwR * 0.55}
-              stroke="#1a0a04" strokeWidth={1.2} strokeLinecap="round" />
+              fill="url(#screwRad)" stroke="#3a3830" strokeWidth={0.8} />
+            <Line x1={sc.x - screwR * 0.6} y1={sc.y}
+              x2={sc.x + screwR * 0.6} y2={sc.y}
+              stroke="rgba(0,0,0,0.5)" strokeWidth={1.2} strokeLinecap="round" />
+            <Line x1={sc.x} y1={sc.y - screwR * 0.6}
+              x2={sc.x} y2={sc.y + screwR * 0.6}
+              stroke="rgba(0,0,0,0.5)" strokeWidth={1.2} strokeLinecap="round" />
           </G>
         ))}
 
-        <Rect x={labelX} y={labelY} width={labelW} height={labelH}
-          rx={4 * s} ry={4 * s} fill="url(#labelGrad)"
-          stroke="#c8a870" strokeWidth={1.2} />
-
-        <Rect x={labelX} y={labelY} width={labelW} height={18 * s}
-          rx={4 * s} ry={4 * s} fill={sideBg} />
-        <Rect x={labelX} y={labelY + 14 * s} width={labelW} height={4 * s} fill={sideBg} />
-
-        <Line x1={labelX + 6 * s} y1={labelY + 30 * s}
-          x2={labelX + labelW - 6 * s} y2={labelY + 30 * s}
-          stroke="rgba(160,120,60,0.4)" strokeWidth={0.8} />
-        <Line x1={labelX + 6 * s} y1={labelY + 42 * s}
-          x2={labelX + labelW - 6 * s} y2={labelY + 42 * s}
-          stroke="rgba(160,120,60,0.25)" strokeWidth={0.6} />
-        <Line x1={labelX + 6 * s} y1={labelY + 52 * s}
-          x2={labelX + labelW - 6 * s} y2={labelY + 52 * s}
-          stroke="rgba(160,120,60,0.25)" strokeWidth={0.6} />
-
-        <Rect x={1} y={1} width={W - 2} height={H - 2} rx={15 * s} ry={15 * s}
-          fill="none" stroke="rgba(255,220,140,0.07)" strokeWidth={1} />
+        {/* Outer highlight rim */}
+        <Rect x={2} y={2} width={W - 4} height={H - 4} rx={12 * s} ry={12 * s}
+          fill="none" stroke="rgba(255,255,255,0.04)" strokeWidth={1} />
       </Svg>
 
-      <View
-        style={{
-          position: "absolute",
-          left: labelX + 8 * s,
-          top: labelY + 2 * s,
-          width: labelW - 16 * s,
-          height: 16 * s,
-          flexDirection: "row",
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <Text style={[styles.sideLabel, { fontSize: 8 * s, color: "rgba(255,255,255,0.9)" }]}>
-          {`◄ SIDE ${side} ►`}
+      {/* Label text overlays */}
+      <View style={{
+        position: "absolute",
+        left: labelX + 36 * s,
+        top: labelY + 13 * s,
+        right: 40 * s,
+      }}>
+        <Text style={[styles.sideBadgeText, { fontSize: 7 * s, color: sideColor }]}>
+          {`SIDE ${side}`}
         </Text>
-        <Text style={[styles.sideLabel, { fontSize: 7 * s, color: "rgba(255,255,255,0.6)" }]}>
+        <Text style={[styles.trackTitle, { fontSize: 10 * s }]} numberOfLines={1}>
+          {title || "NO TRACK LOADED"}
+        </Text>
+      </View>
+
+      {/* Side letter in pill */}
+      <View style={{
+        position: "absolute",
+        left: labelX + 8 * s,
+        top: labelY + 14 * s,
+        width: 22 * s,
+        height: 26 * s,
+        alignItems: "center",
+        justifyContent: "center",
+      }}>
+        <Text style={[styles.sideLetter, { fontSize: 14 * s }]}>{side}</Text>
+      </View>
+
+      {/* "90" text */}
+      <View style={{
+        position: "absolute",
+        right: (W - labelX - labelW) + 4 * s,
+        top: labelY + 14 * s,
+        width: 24 * s,
+        height: 26 * s,
+        alignItems: "center",
+        justifyContent: "center",
+      }}>
+        <Text style={[styles.tapeLen, { fontSize: 9 * s }]}>90</Text>
+      </View>
+
+      {/* Status indicator */}
+      <View style={{
+        position: "absolute",
+        left: winX + 8 * s,
+        top: winY + 6 * s,
+      }}>
+        <Text style={[styles.statusText, { fontSize: 7 * s }]}>
           {isTransitioning ? "■■ LOADING" : isPlaying ? "▶ PLAY" : "■ STOP"}
         </Text>
       </View>
 
-      <View
-        style={{
-          position: "absolute",
-          left: labelX + 6 * s,
-          top: labelY + 22 * s,
-          width: labelW - 12 * s,
-        }}
-      >
-        <Text style={[styles.trackTitle, { fontSize: 9.5 * s }]} numberOfLines={1}>
-          {title || "NO TRACK LOADED"}
-        </Text>
-        {tracks.slice(0, 3).map((t, i) => (
-          <Text key={i} style={[styles.trackLine, { fontSize: 7.5 * s }]} numberOfLines={1}>
-            {`${i + 1}. ${t}`}
-          </Text>
-        ))}
-      </View>
-
-      <View
-        style={{
-          position: "absolute",
-          left: leftSpoolCX - SPOOL_BOX * s / 2,
-          top: leftSpoolCY - SPOOL_BOX * s / 2,
-          width: SPOOL_BOX * s,
-          height: SPOOL_BOX * s,
-        }}
-      >
+      {/* Left spool */}
+      <View style={{
+        position: "absolute",
+        left: leftSpoolCX - SPOOL_BOX * s / 2,
+        top: leftSpoolCY - SPOOL_BOX * s / 2,
+        width: SPOOL_BOX * s,
+        height: SPOOL_BOX * s,
+      }}>
         <Spool
           size={SPOOL_BOX * s}
           radius={leftRadius * s}
@@ -221,15 +275,14 @@ export function CassetteTape({
         />
       </View>
 
-      <View
-        style={{
-          position: "absolute",
-          left: rightSpoolCX - SPOOL_BOX * s / 2,
-          top: rightSpoolCY - SPOOL_BOX * s / 2,
-          width: SPOOL_BOX * s,
-          height: SPOOL_BOX * s,
-        }}
-      >
+      {/* Right spool */}
+      <View style={{
+        position: "absolute",
+        left: rightSpoolCX - SPOOL_BOX * s / 2,
+        top: rightSpoolCY - SPOOL_BOX * s / 2,
+        width: SPOOL_BOX * s,
+        height: SPOOL_BOX * s,
+      }}>
         <Spool
           size={SPOOL_BOX * s}
           radius={rightRadius * s}
@@ -242,20 +295,29 @@ export function CassetteTape({
 }
 
 const styles = StyleSheet.create({
-  sideLabel: {
+  sideBadgeText: {
     fontFamily: "Inter_700Bold",
     letterSpacing: 1.5,
+    marginBottom: 2,
   },
   trackTitle: {
     color: "#2c1a0e",
     fontFamily: "Inter_700Bold",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     textTransform: "uppercase",
-    marginBottom: 2,
   },
-  trackLine: {
-    color: "#5c3820",
-    fontFamily: "Inter_400Regular",
-    letterSpacing: 0.2,
+  sideLetter: {
+    color: "#ffffff",
+    fontFamily: "Inter_700Bold",
+  },
+  tapeLen: {
+    color: "#5c4428",
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.5,
+  },
+  statusText: {
+    color: "rgba(180,160,100,0.5)",
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1,
   },
 });
