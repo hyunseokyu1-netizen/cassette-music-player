@@ -1,8 +1,9 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Audio, AVPlaybackStatus } from "expo-av";
 import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert } from "react-native";
+import { Alert, AppState } from "react-native";
 
 export type Side = "A" | "B";
 
@@ -30,6 +31,22 @@ const KEY_A = "@cassette_items_A_v1";
 const KEY_B = "@cassette_items_B_v1";
 const KEY_SIDE = "@cassette_side_v1";
 
+function findItemAtTapePosition(items: SideItem[], targetMs: number): { itemIdx: number; offsetMs: number } {
+  let elapsed = 0;
+  for (let i = 0; i < items.length; i++) {
+    const dur = items[i].duration;
+    if (elapsed + dur > targetMs) {
+      if (items[i].type === "noise") {
+        const next = items.findIndex((it, j) => j > i && it.type === "track");
+        return next !== -1 ? { itemIdx: next, offsetMs: 0 } : { itemIdx: i, offsetMs: 0 };
+      }
+      return { itemIdx: i, offsetMs: targetMs - elapsed };
+    }
+    elapsed += dur;
+  }
+  return { itemIdx: 0, offsetMs: 0 };
+}
+
 function genId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 }
@@ -41,21 +58,31 @@ function totalMs(items: SideItem[]) {
 }
 
 async function loadFileDuration(uri: string): Promise<number> {
-  try {
-    const { sound, status } = await Audio.Sound.createAsync({ uri }, { shouldPlay: false });
-    let dur = 0;
-    if (status.isLoaded && status.durationMillis) {
-      dur = status.durationMillis;
-    } else {
-      await new Promise((r) => setTimeout(r, 300));
-      const s2 = await sound.getStatusAsync();
-      if (s2.isLoaded && s2.durationMillis) dur = s2.durationMillis;
-    }
-    await sound.unloadAsync();
-    return dur;
-  } catch {
-    return 0;
-  }
+  return new Promise<number>((resolve) => {
+    const timer = setTimeout(() => resolve(0), 10000);
+    (async () => {
+      try {
+        const { sound, status } = await Audio.Sound.createAsync(
+          { uri },
+          { shouldPlay: false }
+        );
+        let dur = 0;
+        if (status.isLoaded && status.durationMillis) {
+          dur = status.durationMillis;
+        } else {
+          await new Promise((r) => setTimeout(r, 600));
+          const s2 = await sound.getStatusAsync();
+          if (s2.isLoaded && s2.durationMillis) dur = s2.durationMillis;
+        }
+        await sound.unloadAsync().catch(() => {});
+        clearTimeout(timer);
+        resolve(dur);
+      } catch {
+        clearTimeout(timer);
+        resolve(0);
+      }
+    })();
+  });
 }
 
 export interface UseAudioPlayerReturn {
@@ -81,7 +108,7 @@ export interface UseAudioPlayerReturn {
   seekTo: (ms: number) => Promise<void>;
   seekForward: (s?: number) => Promise<void>;
   seekBackward: (s?: number) => Promise<void>;
-  flipSide: () => Promise<void>;
+  flipSide: (tapePositionMs?: number) => Promise<void>;
   addToSide: (side: Side) => Promise<void>;
   removeTrackItem: (side: Side, trackId: string) => void;
   updateNoiseDuration: (side: Side, noiseId: string, ms: number) => void;
@@ -99,6 +126,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const [isAdding, setIsAdding] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
+  const positionRef = useRef(0);
+  const durationRef = useRef(0);
+  const isSeekingRef = useRef(false);
 
   const soundRef = useRef<Audio.Sound | null>(null);
   const noiseRef = useRef<Audio.Sound | null>(null);
@@ -123,9 +153,15 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   useEffect(() => {
     Audio.setAudioModeAsync({
-      allowsRecordingIOS: false, staysActiveInBackground: true,
-      playsInSilentModeIOS: true, shouldDuckAndroid: true, playThroughEarpieceAndroid: false,
+      allowsRecordingIOS: false,
+      staysActiveInBackground: true,
+      playsInSilentModeIOS: true,
+      shouldDuckAndroid: false,
+      playThroughEarpieceAndroid: false,
     });
+  }, []);
+
+  useEffect(() => {
     (async () => {
       const [a, b, side] = await Promise.all([
         AsyncStorage.getItem(KEY_A), AsyncStorage.getItem(KEY_B), AsyncStorage.getItem(KEY_SIDE),
@@ -187,7 +223,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     return !cancelRef.current;
   };
 
-  const playItemAtRef = useRef<((idx: number) => Promise<void>) | null>(null);
+  const playItemAtRef = useRef<((idx: number, initialPositionMs?: number) => Promise<void>) | null>(null);
+
+  const flipSideRef = useRef<((tapePositionMs?: number) => Promise<void>) | null>(null);
 
   const advance = useCallback(() => {
     if (cancelRef.current) return;
@@ -204,16 +242,13 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         playNoiseDuration(fillMs).then((done) => {
           setIsPlayingNoise(false);
           if (done) {
-            setIsPlaying(false);
-            setCurrentItemIdx(-1);
-            itemIdxRef.current = -1;
+            // 테이프 끝 → 반대 사이드 처음부터 자동 재생
+            flipSideRef.current?.(MAX_SIDE_MS);
           }
         });
       } else {
-        setIsPlaying(false);
-        setIsPlayingNoise(false);
-        setCurrentItemIdx(-1);
-        itemIdxRef.current = -1;
+        // 짧은 gap → 바로 반대 사이드 처음부터 자동 재생
+        flipSideRef.current?.(MAX_SIDE_MS);
       }
       return;
     }
@@ -222,13 +257,15 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
     if (!status.isLoaded) return;
+    positionRef.current = status.positionMillis;
+    durationRef.current = status.durationMillis ?? 0;
     setPosition(status.positionMillis);
     setDuration(status.durationMillis ?? 0);
     setIsPlaying(status.isPlaying);
     if (status.didJustFinish && !cancelRef.current) advance();
   }, [advance]);
 
-  const playItemAt = useCallback(async (idx: number) => {
+  const playItemAt = useCallback(async (idx: number, initialPositionMs?: number) => {
     if (cancelRef.current) return;
     const items = getItems(sideRef.current);
     if (idx < 0 || idx >= items.length) return;
@@ -253,7 +290,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         await stopTrack();
         const { sound } = await Audio.Sound.createAsync(
           { uri: item.uri },
-          { shouldPlay: true },
+          { shouldPlay: true, positionMillis: initialPositionMs ?? 0 },
           onPlaybackStatusUpdate
         );
         soundRef.current = sound;
@@ -267,6 +304,26 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   }, [getItems, advance, onPlaybackStatusUpdate]);
 
   useEffect(() => { playItemAtRef.current = playItemAt; }, [playItemAt]);
+
+  // 화면 꺼짐 후 복귀 시 트랙이 끝났는지 확인하고 다음 곡으로 진행
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", async (nextState) => {
+      if (nextState === "active" && soundRef.current && !cancelRef.current) {
+        try {
+          const status = await soundRef.current.getStatusAsync();
+          if (
+            status.isLoaded &&
+            !status.isPlaying &&
+            status.durationMillis &&
+            status.positionMillis >= status.durationMillis - 300
+          ) {
+            advance();
+          }
+        } catch {}
+      }
+    });
+    return () => subscription.remove();
+  }, [advance]);
 
   const play = useCallback(async () => {
     if (isPlayingNoise) return;
@@ -353,16 +410,30 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   }, [position, getItems, cancelAll]);
 
   const seekTo = useCallback(async (ms: number) => {
-    await soundRef.current?.setPositionAsync(ms);
+    if (isSeekingRef.current) return;
+    isSeekingRef.current = true;
+    try { await soundRef.current?.setPositionAsync(ms); } finally { isSeekingRef.current = false; }
   }, []);
   const seekForward = useCallback(async (s = 10) => {
-    await soundRef.current?.setPositionAsync(Math.min(position + s * 1000, duration));
-  }, [position, duration]);
+    if (isSeekingRef.current || !soundRef.current) return;
+    isSeekingRef.current = true;
+    try {
+      await soundRef.current.setPositionAsync(
+        Math.min(positionRef.current + s * 1000, durationRef.current)
+      );
+    } finally { isSeekingRef.current = false; }
+  }, []);
   const seekBackward = useCallback(async (s = 10) => {
-    await soundRef.current?.setPositionAsync(Math.max(0, position - s * 1000));
-  }, [position]);
+    if (isSeekingRef.current || !soundRef.current) return;
+    isSeekingRef.current = true;
+    try {
+      await soundRef.current.setPositionAsync(
+        Math.max(0, positionRef.current - s * 1000)
+      );
+    } finally { isSeekingRef.current = false; }
+  }, []);
 
-  const flipSide = useCallback(async () => {
+  const flipSide = useCallback(async (sourceTapePositionMs: number = 0) => {
     await cancelAll();
     cancelRef.current = false;
     setIsPlayingNoise(true);
@@ -377,8 +448,29 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setCurrentItemIdx(-1);
     itemIdxRef.current = -1;
     const newItems = getItems(newSide);
-    if (newItems.length > 0) { cancelRef.current = false; await playItemAtRef.current?.(0); }
+    cancelRef.current = false;
+    const newSideTotal = totalMs(newItems);
+    const targetMs = Math.max(0, MAX_SIDE_MS - sourceTapePositionMs);
+
+    if (newItems.length > 0 && targetMs < newSideTotal) {
+      const { itemIdx, offsetMs } = findItemAtTapePosition(newItems, targetMs);
+      await playItemAtRef.current?.(itemIdx, offsetMs);
+    } else {
+      const remainingBlankMs = MAX_SIDE_MS - targetMs;
+      if (remainingBlankMs > 1000) {
+        setIsPlayingNoise(true);
+        setIsPlaying(true);
+        playNoiseDuration(remainingBlankMs).then((done) => {
+          setIsPlayingNoise(false);
+          if (done) flipSideRef.current?.(MAX_SIDE_MS);
+        });
+      } else {
+        flipSideRef.current?.(MAX_SIDE_MS);
+      }
+    }
   }, [cancelAll, getItems]);
+
+  useEffect(() => { flipSideRef.current = flipSide; }, [flipSide]);
 
   const setSide = useCallback((side: Side) => {
     cancelRef.current = true;
@@ -399,17 +491,39 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setIsAdding(true);
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: "audio/*", multiple: true, copyToCacheDirectory: false,
+        type: "audio/*", multiple: true, copyToCacheDirectory: true,
       });
       if (!result.canceled) {
+        // 앱 내부 저장소에 복사하여 앱 재시작 후에도 URI가 유효하도록 함
+        const audioDir = FileSystem.documentDirectory + "audio/";
+        try {
+          await FileSystem.makeDirectoryAsync(audioDir, { intermediates: true });
+        } catch {}
+
         const withDur = await Promise.all(
-          result.assets.map(async (a) => ({
-            id: trackId(a.uri),
-            type: "track" as const,
-            title: (a.name ?? a.uri.split("/").pop() ?? "Unknown").replace(/\.[^/.]+$/, ""),
-            duration: await loadFileDuration(a.uri),
-            uri: a.uri,
-          }))
+          result.assets.map(async (a) => {
+            const rawName = a.name ?? a.uri.split("/").pop() ?? `track_${Date.now()}`;
+            const safeName = rawName.replace(/[^a-zA-Z0-9._\-]/g, "_");
+            const localUri = audioDir + safeName;
+            let persistUri = a.uri;
+            try {
+              const destInfo = await FileSystem.getInfoAsync(localUri);
+              if (!destInfo.exists) {
+                await FileSystem.copyAsync({ from: a.uri, to: localUri });
+              }
+              const copied = await FileSystem.getInfoAsync(localUri);
+              if (copied.exists) persistUri = localUri;
+            } catch {}
+            const title = rawName.replace(/\.[^/.]+$/, "");
+            const duration = await loadFileDuration(persistUri);
+            return {
+              id: trackId(persistUri),
+              type: "track" as const,
+              title,
+              duration,
+              uri: persistUri,
+            };
+          })
         );
 
         let items = [...existing];

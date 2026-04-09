@@ -33,12 +33,13 @@ export default function PlayerScreen() {
 
   const handleFlip = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    const currentTapePos = tapePosition;
     scaleX.value = withSequence(
       withTiming(0, { duration: 180 }),
       withTiming(1, { duration: 180 })
     );
-    setTimeout(() => flipSide(), 180);
-  }, [flipSide]);
+    setTimeout(() => flipSide(currentTapePos), 180);
+  }, [flipSide, tapePosition]);
 
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scaleX: scaleX.value }] }));
 
@@ -88,17 +89,9 @@ export default function PlayerScreen() {
       </View>
 
       <View style={styles.trackInfo}>
-        {isPlayingNoise ? (
-          <View style={styles.noiseRow}>
-            <View style={styles.dot} />
-            <Text style={styles.noiseText}>TAPE NOISE</Text>
-            <View style={styles.dot} />
-          </View>
-        ) : (
-          <Text style={styles.trackTitle} numberOfLines={2}>
-            {currentTrack?.title ?? (hasTracks ? "Tap PLAY to start" : "Open library to add tracks")}
-          </Text>
-        )}
+        <Text style={styles.trackTitle} numberOfLines={2}>
+          {currentTrack?.title ?? (hasTracks ? "Tap PLAY to start" : "Open library to add tracks")}
+        </Text>
         <View style={styles.sideRow}>
           <Text style={[styles.sideCount, sideATracks.length > 0 && { color: "#c0524a" }]}>
             {`A: ${sideATracks.length} tracks`}
@@ -151,10 +144,7 @@ const styles = StyleSheet.create({
     color: colors.light.cassetteCream, fontSize: 17,
     fontFamily: "Inter_700Bold", textAlign: "center", letterSpacing: 0.4,
   },
-  noiseRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  noiseText: { color: colors.light.cassetteBeige, fontSize: 12, fontFamily: "Inter_600SemiBold", letterSpacing: 3 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.light.cassetteBeige, opacity: 0.7 },
-  sideRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+sideRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   sideCount: { fontSize: 11, fontFamily: "Inter_500Medium", color: colors.light.mutedForeground, letterSpacing: 0.5 },
   sideDot: { color: colors.light.mutedForeground, fontSize: 12 },
   controls: { marginTop: 12, marginBottom: 14 },

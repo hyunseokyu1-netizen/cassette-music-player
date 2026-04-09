@@ -98,7 +98,7 @@ export function ControlButtons({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     holdStart.current = Date.now();
     onFastForward(getSeek());
-    ffRef.current = setInterval(() => onFastForward(getSeek()), 180);
+    ffRef.current = setInterval(() => onFastForward(getSeek()), 300);
   }, [onFastForward]);
 
   const stopFF = () => {
@@ -109,7 +109,7 @@ export function ControlButtons({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     holdStart.current = Date.now();
     onRewind(getSeek());
-    rwRef.current = setInterval(() => onRewind(getSeek()), 180);
+    rwRef.current = setInterval(() => onRewind(getSeek()), 300);
   }, [onRewind]);
 
   const stopRW = () => {
