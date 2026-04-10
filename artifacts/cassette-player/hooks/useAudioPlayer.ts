@@ -307,11 +307,6 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     itemIdxRef.current = idx;
 
     if (item.type === "noise") {
-      // 화면 꺼짐(백그라운드)일 때 noise 건너뜀 → JS 실행 시간 최소화로 다음 곡 재생 보장
-      if (AppState.currentState !== "active") {
-        if (!cancelRef.current) advance();
-        return;
-      }
       setIsPlayingNoise(true);
       setIsPlaying(true);
       setPosition(0);
