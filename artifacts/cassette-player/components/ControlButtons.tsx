@@ -10,6 +10,8 @@ interface ControlButtonsProps {
   onPlayPause: () => void;
   onFastForward: (seconds: number) => void;
   onRewind: (seconds: number) => void;
+  onFFStart: () => void;
+  onFFStop: () => void;
 }
 
 function DeckButton({
@@ -81,9 +83,8 @@ function DeckButton({
 
 export function ControlButtons({
   isPlaying, isLoading, hasTracks,
-  onPlayPause, onFastForward, onRewind,
+  onPlayPause, onFastForward, onRewind, onFFStart, onFFStop,
 }: ControlButtonsProps) {
-  const ffRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const rwRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdStart = useRef(0);
 
@@ -94,16 +95,14 @@ export function ControlButtons({
     return 15;
   };
 
-  const startFF = useCallback(() => {
+  const handleFFStart = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    holdStart.current = Date.now();
-    onFastForward(getSeek());
-    ffRef.current = setInterval(() => onFastForward(getSeek()), 300);
-  }, [onFastForward]);
+    onFFStart();
+  }, [onFFStart]);
 
-  const stopFF = () => {
-    if (ffRef.current) { clearInterval(ffRef.current); ffRef.current = null; }
-  };
+  const handleFFStop = useCallback(() => {
+    onFFStop();
+  }, [onFFStop]);
 
   const startRW = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -143,8 +142,8 @@ export function ControlButtons({
           <DeckButton
             label="▶▶"
             subLabel="FF"
-            onPressIn={startFF}
-            onPressOut={stopFF}
+            onPressIn={handleFFStart}
+            onPressOut={handleFFStop}
             disabled={!hasTracks}
           />
         </View>

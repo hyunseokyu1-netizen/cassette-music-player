@@ -109,6 +109,8 @@ export interface UseAudioPlayerReturn {
   seekTo: (ms: number) => Promise<void>;
   seekForward: (s?: number) => Promise<void>;
   seekBackward: (s?: number) => Promise<void>;
+  startFastForward: () => Promise<void>;
+  stopFastForward: () => Promise<void>;
   flipSide: (tapePositionMs?: number) => Promise<void>;
   addToSide: (side: Side) => Promise<void>;
   removeTrackItem: (side: Side, trackId: string) => void;
@@ -475,6 +477,54 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     } finally { isSeekingRef.current = false; }
   }, []);
 
+  // FF 전용 사운드 및 스크럽 상태
+  const ffSoundRef = useRef<Audio.Sound | null>(null);
+  const ffScrubIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const ffActiveRef = useRef(false);
+
+  const startFastForward = useCallback(async () => {
+    if (ffActiveRef.current || !soundRef.current || isPlayingNoise) return;
+    ffActiveRef.current = true;
+    // 실제 오디오 일시정지
+    try { await soundRef.current.pauseAsync(); } catch {}
+    // FF 사운드 루프 재생
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("../assets/sounds/tape-ff.wav"),
+        { shouldPlay: true, isLooping: true, volume: 0.85 }
+      );
+      ffSoundRef.current = sound;
+    } catch {}
+    // 타임라인 스크럽 (10배속으로 position 업데이트)
+    ffScrubIntervalRef.current = setInterval(() => {
+      if (!ffActiveRef.current) return;
+      const next = Math.min(positionRef.current + 1000, durationRef.current);
+      positionRef.current = next;
+      setPosition(next);
+    }, 100);
+  }, [isPlayingNoise]);
+
+  const stopFastForward = useCallback(async () => {
+    if (!ffActiveRef.current) return;
+    ffActiveRef.current = false;
+    if (ffScrubIntervalRef.current) {
+      clearInterval(ffScrubIntervalRef.current);
+      ffScrubIntervalRef.current = null;
+    }
+    // FF 사운드 정지
+    if (ffSoundRef.current) {
+      try { await ffSoundRef.current.stopAsync(); await ffSoundRef.current.unloadAsync(); } catch {}
+      ffSoundRef.current = null;
+    }
+    // 실제 오디오를 스크럽된 위치로 seek 후 재생
+    if (soundRef.current && !cancelRef.current) {
+      try {
+        await soundRef.current.setPositionAsync(positionRef.current);
+        await soundRef.current.playAsync();
+      } catch {}
+    }
+  }, []);
+
   const playFlipSound = async () => {
     try {
       const { sound } = await Audio.Sound.createAsync(
@@ -652,7 +702,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     position, duration, progress,
     togglePlayPause, play, pause, stopPlayback,
     playNext, playPrevious, playItemAt,
-    seekTo, seekForward, seekBackward,
+    seekTo, seekForward, seekBackward, startFastForward, stopFastForward,
     flipSide, addToSide, removeTrackItem, updateNoiseDuration, setSide,
   };
 }

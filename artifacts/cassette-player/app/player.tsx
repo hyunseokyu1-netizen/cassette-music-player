@@ -23,7 +23,7 @@ export default function PlayerScreen() {
     sideA, sideB, currentSide, currentTrack, currentItemIdx,
     isPlaying, isLoading, isPlayingNoise, position,
     togglePlayPause,
-    seekForward, seekBackward, flipSide,
+    seekForward, seekBackward, startFastForward, stopFastForward, flipSide,
   } = useAudioPlayerContext();
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
@@ -113,6 +113,8 @@ export default function PlayerScreen() {
           onPlayPause={togglePlayPause}
           onFastForward={(s) => seekForward(s)}
           onRewind={(s) => seekBackward(s)}
+          onFFStart={startFastForward}
+          onFFStop={stopFastForward}
         />
       </View>
 
