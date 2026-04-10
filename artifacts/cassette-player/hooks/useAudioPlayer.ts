@@ -321,17 +321,20 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       setDuration(0);
       try {
         await stopTrack();
+        const startPos = initialPositionMs ?? 0;
         const { sound } = await Audio.Sound.createAsync(
           { uri: item.uri },
-          { shouldPlay: false },
+          // positionMillis: 일부 기기에서 createAsync 시점에 seek 적용
+          { shouldPlay: false, positionMillis: startPos },
           onPlaybackStatusUpdate
         );
         soundRef.current = sound;
-        if (initialPositionMs && initialPositionMs > 0) {
-          await sound.setPositionAsync(initialPositionMs);
-        }
         if (!cancelRef.current) {
+          // setPositionAsync: play 전 명시적 seek (positionMillis 미적용 기기 보완)
+          if (startPos > 0) await sound.setPositionAsync(startPos);
           await sound.playAsync();
+          // playAsync 후 한 번 더 seek — 재생 상태에서 seek이 더 신뢰도 높음
+          if (startPos > 0) await sound.setPositionAsync(startPos);
           setIsPlaying(true);
         }
       } catch (err) {
