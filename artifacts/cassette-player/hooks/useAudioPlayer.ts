@@ -25,7 +25,6 @@ export type SideItem = TrackItem | NoiseItem;
 
 export const MAX_SIDE_MS = 30 * 60 * 1000;
 export const DEFAULT_NOISE_MS = 2000;
-const NOISE_CHUNK_MS = 2200;
 
 const KEY_A = "@cassette_items_A_v1";
 const KEY_B = "@cassette_items_B_v1";
@@ -196,31 +195,27 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setDuration(0);
   }, []);
 
-  const playNoiseChunk = async (ms: number) => {
-    const actual = Math.min(ms, NOISE_CHUNK_MS);
+  const playNoiseDuration = async (durationMs: number): Promise<boolean> => {
     try {
       await stopNoise();
+      if (cancelRef.current) return false;
       const { sound } = await Audio.Sound.createAsync(
         require("../assets/sounds/tape-noise.wav"),
-        { shouldPlay: true, volume: 0.45 }
+        { shouldPlay: true, isLooping: true, volume: 0.45 }
       );
       noiseRef.current = sound;
-      await new Promise<void>((r) => setTimeout(r, actual));
+      const deadline = Date.now() + durationMs;
+      while (Date.now() < deadline && !cancelRef.current) {
+        await new Promise<void>((r) => setTimeout(r, 100));
+      }
       await sound.stopAsync().catch(() => {});
       await sound.unloadAsync().catch(() => {});
       noiseRef.current = null;
+      return !cancelRef.current;
     } catch {
-      await new Promise<void>((r) => setTimeout(r, actual));
+      noiseRef.current = null;
+      return !cancelRef.current;
     }
-  };
-
-  const playNoiseDuration = async (durationMs: number): Promise<boolean> => {
-    let left = durationMs;
-    while (left > 0 && !cancelRef.current) {
-      await playNoiseChunk(Math.min(left, NOISE_CHUNK_MS));
-      left -= NOISE_CHUNK_MS;
-    }
-    return !cancelRef.current;
   };
 
   const playItemAtRef = useRef<((idx: number, initialPositionMs?: number) => Promise<void>) | null>(null);
@@ -433,11 +428,24 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     } finally { isSeekingRef.current = false; }
   }, []);
 
+  const playFlipSound = async () => {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("../assets/sounds/tape-flip.wav"),
+        { shouldPlay: true, volume: 0.9 }
+      );
+      await new Promise<void>((r) => setTimeout(r, 600));
+      await sound.stopAsync().catch(() => {});
+      await sound.unloadAsync().catch(() => {});
+    } catch {}
+  };
+
   const flipSide = useCallback(async (sourceTapePositionMs: number = 0) => {
     await cancelAll();
     cancelRef.current = false;
     setIsPlayingNoise(true);
     setIsPlaying(true);
+    await playFlipSound();
     const done = await playNoiseDuration(DEFAULT_NOISE_MS);
     setIsPlayingNoise(false);
     if (!done) return;
@@ -491,7 +499,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setIsAdding(true);
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: "audio/*", multiple: true, copyToCacheDirectory: true,
+        type: "*/*", multiple: true, copyToCacheDirectory: true,
       });
       if (!result.canceled) {
         // 앱 내부 저장소에 복사하여 앱 재시작 후에도 URI가 유효하도록 함
