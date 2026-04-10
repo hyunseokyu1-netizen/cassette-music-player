@@ -195,27 +195,62 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setDuration(0);
   }, []);
 
-  const playNoiseDuration = async (durationMs: number): Promise<boolean> => {
-    try {
-      await stopNoise();
-      if (cancelRef.current) return false;
-      const { sound } = await Audio.Sound.createAsync(
-        require("../assets/sounds/tape-noise.wav"),
-        { shouldPlay: true, isLooping: true, volume: 0.45 }
-      );
-      noiseRef.current = sound;
-      const deadline = Date.now() + durationMs;
-      while (Date.now() < deadline && !cancelRef.current) {
-        await new Promise<void>((r) => setTimeout(r, 100));
-      }
-      await sound.stopAsync().catch(() => {});
-      await sound.unloadAsync().catch(() => {});
-      noiseRef.current = null;
-      return !cancelRef.current;
-    } catch {
-      noiseRef.current = null;
-      return !cancelRef.current;
-    }
+  // tape-noise.wav 길이 (7.92s). seekMs = NOISE_FILE_MS - durationMs 위치에서
+  // 시작하면 durationMs 후 didJustFinish가 자연 발생 → setTimeout 불필요
+  const NOISE_FILE_MS = 7900;
+
+  const playNoiseDuration = (durationMs: number): Promise<boolean> => {
+    if (cancelRef.current) return Promise.resolve(false);
+    if (durationMs <= 0) return Promise.resolve(!cancelRef.current);
+
+    const playMs = Math.min(durationMs, NOISE_FILE_MS);
+    const seekMs = Math.max(0, NOISE_FILE_MS - playMs);
+
+    return new Promise<boolean>((resolve) => {
+      let settled = false;
+      const settle = (val: boolean) => { if (!settled) { settled = true; resolve(val); } };
+
+      // 외부 취소 감지 (pause 버튼 등) — 타이머 스로틀링 영향을 받아도 무관
+      const cancelWatcher = setInterval(() => {
+        if (cancelRef.current) { clearInterval(cancelWatcher); settle(false); }
+      }, 150);
+
+      (async () => {
+        try {
+          await stopNoise();
+          if (cancelRef.current) { clearInterval(cancelWatcher); settle(false); return; }
+
+          const { sound } = await Audio.Sound.createAsync(
+            require("../assets/sounds/tape-noise.wav"),
+            { shouldPlay: false, volume: 0.45 },
+            (status) => {
+              if (!status.isLoaded) return;
+              if (status.didJustFinish) {           // 오디오 시스템 콜백 — 백그라운드 안전
+                clearInterval(cancelWatcher);
+                sound.unloadAsync().catch(() => {});
+                noiseRef.current = null;
+                settle(!cancelRef.current);
+              }
+            }
+          );
+          noiseRef.current = sound;
+
+          if (cancelRef.current) {
+            clearInterval(cancelWatcher);
+            await sound.unloadAsync().catch(() => {});
+            noiseRef.current = null;
+            settle(false);
+            return;
+          }
+          if (seekMs > 0) await sound.setPositionAsync(seekMs);
+          await sound.playAsync();
+        } catch {
+          clearInterval(cancelWatcher);
+          noiseRef.current = null;
+          settle(!cancelRef.current);
+        }
+      })();
+    });
   };
 
   const playItemAtRef = useRef<((idx: number, initialPositionMs?: number) => Promise<void>) | null>(null);
