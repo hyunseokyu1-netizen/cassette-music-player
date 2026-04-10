@@ -36,8 +36,15 @@ function findItemAtTapePosition(items: SideItem[], targetMs: number): { itemIdx:
     const dur = items[i].duration;
     if (elapsed + dur > targetMs) {
       if (items[i].type === "noise") {
+        // 이 noise 이후에 트랙이 있으면 다음 트랙 처음부터
         const next = items.findIndex((it, j) => j > i && it.type === "track");
-        return next !== -1 ? { itemIdx: next, offsetMs: 0 } : { itemIdx: i, offsetMs: 0 };
+        if (next !== -1) return { itemIdx: next, offsetMs: 0 };
+        // trailing noise (뒤에 트랙 없음) → 이 noise 이전 마지막 트랙 찾기
+        for (let k = i - 1; k >= 0; k--) {
+          if (items[k].type === "track") return { itemIdx: k, offsetMs: 0 };
+        }
+        // 트랙이 아예 없으면 index 0
+        return { itemIdx: 0, offsetMs: 0 };
       }
       return { itemIdx: i, offsetMs: targetMs - elapsed };
     }
@@ -260,9 +267,10 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const playItemAtRef = useRef<((idx: number, initialPositionMs?: number) => Promise<void>) | null>(null);
 
   const flipSideRef = useRef<((tapePositionMs?: number) => Promise<void>) | null>(null);
+  const isFlippingRef = useRef(false);
 
   const advance = useCallback(() => {
-    if (cancelRef.current) return;
+    if (cancelRef.current || isFlippingRef.current) return;
     const items = getItems(sideRef.current);
     const next = itemIdxRef.current + 1;
     if (next >= items.length) {
@@ -538,31 +546,36 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   };
 
   const flipSide = useCallback(async (sourceTapePositionMs: number = 0) => {
+    if (isFlippingRef.current) return;
+    isFlippingRef.current = true;
     await cancelAll();
     cancelRef.current = false;
     setIsPlayingNoise(true);
     setIsPlaying(true);
-    await playFlipSound();
-    const done = await playNoiseDuration(DEFAULT_NOISE_MS);
-    setIsPlayingNoise(false);
-    if (!done) return;
-    const newSide: Side = sideRef.current === "A" ? "B" : "A";
-    setCurrentSide(newSide);
-    sideRef.current = newSide;
-    AsyncStorage.setItem(KEY_SIDE, newSide);
-    setCurrentItemIdx(-1);
-    itemIdxRef.current = -1;
-    const newItems = getItems(newSide);
-    cancelRef.current = false;
-    if (newItems.length === 0) {
-      setIsPlaying(false);
-      return;
+    try {
+      await playFlipSound();
+      const done = await playNoiseDuration(DEFAULT_NOISE_MS);
+      setIsPlayingNoise(false);
+      if (!done) return;
+      const newSide: Side = sideRef.current === "A" ? "B" : "A";
+      setCurrentSide(newSide);
+      sideRef.current = newSide;
+      AsyncStorage.setItem(KEY_SIDE, newSide);
+      setCurrentItemIdx(-1);
+      itemIdxRef.current = -1;
+      const newItems = getItems(newSide);
+      cancelRef.current = false;
+      if (newItems.length === 0) {
+        setIsPlaying(false);
+        return;
+      }
+      // targetMs: 반대 사이드 테이프 기준 재생 시작 위치 (물리적 테이프 위치 보존)
+      const targetMs = Math.max(0, MAX_SIDE_MS - sourceTapePositionMs);
+      const { itemIdx, offsetMs } = findItemAtTapePosition(newItems, targetMs);
+      await playItemAtRef.current?.(itemIdx, offsetMs);
+    } finally {
+      isFlippingRef.current = false;
     }
-    // targetMs: B사이드 테이프 기준 재생 시작 위치
-    // B의 콘텐츠 범위를 초과하면 findItemAtTapePosition이 index 0을 반환 → 처음부터 재생
-    const targetMs = Math.max(0, MAX_SIDE_MS - sourceTapePositionMs);
-    const { itemIdx, offsetMs } = findItemAtTapePosition(newItems, targetMs);
-    await playItemAtRef.current?.(itemIdx, offsetMs);
   }, [cancelAll, getItems]);
 
   useEffect(() => { flipSideRef.current = flipSide; }, [flipSide]);
