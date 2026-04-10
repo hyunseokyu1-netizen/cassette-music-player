@@ -293,7 +293,8 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     durationRef.current = status.durationMillis ?? 0;
     setPosition(status.positionMillis);
     setDuration(status.durationMillis ?? 0);
-    setIsPlaying(status.isPlaying);
+    // seek 중에는 isPlaying 업데이트 생략 (FF/RW 시 Play/Pause 버튼 flickering 방지)
+    if (!isSeekingRef.current) setIsPlaying(status.isPlaying);
     if (status.didJustFinish && !cancelRef.current) advance();
   }, [advance]);
 
@@ -306,6 +307,11 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     itemIdxRef.current = idx;
 
     if (item.type === "noise") {
+      // 화면 꺼짐(백그라운드)일 때 noise 건너뜀 → JS 실행 시간 최소화로 다음 곡 재생 보장
+      if (AppState.currentState !== "active") {
+        if (!cancelRef.current) advance();
+        return;
+      }
       setIsPlayingNoise(true);
       setIsPlaying(true);
       setPosition(0);
