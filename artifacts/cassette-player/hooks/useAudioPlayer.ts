@@ -43,7 +43,9 @@ function findItemAtTapePosition(items: SideItem[], targetMs: number): { itemIdx:
     }
     elapsed += dur;
   }
-  return { itemIdx: 0, offsetMs: 0 };
+  // targetMs가 콘텐츠 범위 초과 → 첫 번째 트랙부터 재생 (opening noise 건너뜀)
+  const firstTrack = items.findIndex((it) => it.type === "track");
+  return firstTrack !== -1 ? { itemIdx: firstTrack, offsetMs: 0 } : { itemIdx: 0, offsetMs: 0 };
 }
 
 function genId(prefix: string) {
@@ -320,11 +322,17 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         await stopTrack();
         const { sound } = await Audio.Sound.createAsync(
           { uri: item.uri },
-          { shouldPlay: true, positionMillis: initialPositionMs ?? 0 },
+          { shouldPlay: false },
           onPlaybackStatusUpdate
         );
         soundRef.current = sound;
-        setIsPlaying(true);
+        if (initialPositionMs && initialPositionMs > 0) {
+          await sound.setPositionAsync(initialPositionMs);
+        }
+        if (!cancelRef.current) {
+          await sound.playAsync();
+          setIsPlaying(true);
+        }
       } catch (err) {
         console.warn("playItemAt error:", err);
         if (!cancelRef.current) advance();
