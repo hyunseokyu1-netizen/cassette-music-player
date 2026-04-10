@@ -457,25 +457,15 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     itemIdxRef.current = -1;
     const newItems = getItems(newSide);
     cancelRef.current = false;
-    const newSideTotal = totalMs(newItems);
-    const targetMs = Math.max(0, MAX_SIDE_MS - sourceTapePositionMs);
-
-    if (newItems.length > 0 && targetMs < newSideTotal) {
-      const { itemIdx, offsetMs } = findItemAtTapePosition(newItems, targetMs);
-      await playItemAtRef.current?.(itemIdx, offsetMs);
-    } else {
-      const remainingBlankMs = MAX_SIDE_MS - targetMs;
-      if (remainingBlankMs > 1000) {
-        setIsPlayingNoise(true);
-        setIsPlaying(true);
-        playNoiseDuration(remainingBlankMs).then((done) => {
-          setIsPlayingNoise(false);
-          if (done) flipSideRef.current?.(MAX_SIDE_MS);
-        });
-      } else {
-        flipSideRef.current?.(MAX_SIDE_MS);
-      }
+    if (newItems.length === 0) {
+      setIsPlaying(false);
+      return;
     }
+    // targetMs: B사이드 테이프 기준 재생 시작 위치
+    // B의 콘텐츠 범위를 초과하면 findItemAtTapePosition이 index 0을 반환 → 처음부터 재생
+    const targetMs = Math.max(0, MAX_SIDE_MS - sourceTapePositionMs);
+    const { itemIdx, offsetMs } = findItemAtTapePosition(newItems, targetMs);
+    await playItemAtRef.current?.(itemIdx, offsetMs);
   }, [cancelAll, getItems]);
 
   useEffect(() => { flipSideRef.current = flipSide; }, [flipSide]);
