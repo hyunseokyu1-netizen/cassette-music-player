@@ -35,22 +35,12 @@ function findItemAtTapePosition(items: SideItem[], targetMs: number): { itemIdx:
   for (let i = 0; i < items.length; i++) {
     const dur = items[i].duration;
     if (elapsed + dur > targetMs) {
-      if (items[i].type === "noise") {
-        // 이 noise 이후에 트랙이 있으면 다음 트랙 처음부터
-        const next = items.findIndex((it, j) => j > i && it.type === "track");
-        if (next !== -1) return { itemIdx: next, offsetMs: 0 };
-        // trailing noise (뒤에 트랙 없음) → 이 noise 이전 마지막 트랙 찾기
-        for (let k = i - 1; k >= 0; k--) {
-          if (items[k].type === "track") return { itemIdx: k, offsetMs: 0 };
-        }
-        // 트랙이 아예 없으면 index 0
-        return { itemIdx: 0, offsetMs: 0 };
-      }
+      // track이든 noise든 동일하게 해당 아이템의 offset 반환
       return { itemIdx: i, offsetMs: targetMs - elapsed };
     }
     elapsed += dur;
   }
-  // targetMs가 콘텐츠 범위 초과 → 첫 번째 트랙부터 재생 (opening noise 건너뜀)
+  // targetMs가 콘텐츠 범위 초과 → 첫 번째 트랙부터 재생
   const firstTrack = items.findIndex((it) => it.type === "track");
   return firstTrack !== -1 ? { itemIdx: firstTrack, offsetMs: 0 } : { itemIdx: 0, offsetMs: 0 };
 }
@@ -321,7 +311,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       setIsPlaying(true);
       setPosition(0);
       setDuration(item.duration);
-      const done = await playNoiseDuration(item.duration);
+      // 플립으로 noise 중간에 진입한 경우 남은 시간만 재생
+      const remainingMs = initialPositionMs ? Math.max(0, item.duration - initialPositionMs) : item.duration;
+      const done = await playNoiseDuration(remainingMs);
       setIsPlayingNoise(false);
       if (done) advance();
     } else {
