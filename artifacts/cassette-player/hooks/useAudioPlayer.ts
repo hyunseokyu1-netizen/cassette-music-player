@@ -544,6 +544,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     cancelRef.current = false;
     setIsPlayingNoise(true);
     setIsPlaying(true);
+    let shouldFlipBack = false;
     try {
       await playFlipSound();
       const done = await playNoiseDuration(DEFAULT_NOISE_MS);
@@ -557,16 +558,30 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       itemIdxRef.current = -1;
       const newItems = getItems(newSide);
       cancelRef.current = false;
-      if (newItems.length === 0) {
-        setIsPlaying(false);
-        return;
-      }
       // targetMs: 반대 사이드 테이프 기준 재생 시작 위치 (물리적 테이프 위치 보존)
       const targetMs = Math.max(0, MAX_SIDE_MS - sourceTapePositionMs);
-      const { itemIdx, offsetMs } = findItemAtTapePosition(newItems, targetMs);
-      await playItemAtRef.current?.(itemIdx, offsetMs);
+      const totalContent = totalMs(newItems);
+
+      if (newItems.length === 0 || targetMs >= totalContent) {
+        // 트랙 없음 또는 flip 위치가 trailing fill zone → 남은 테이프 시간만큼 노이즈
+        const fillMs = MAX_SIDE_MS - targetMs;
+        if (fillMs > 500) {
+          setIsPlayingNoise(true);
+          setIsPlaying(true);
+          const fillDone = await playNoiseDuration(fillMs);
+          setIsPlayingNoise(false);
+          if (fillDone) shouldFlipBack = true;
+        } else {
+          setIsPlaying(false);
+        }
+      } else {
+        const { itemIdx, offsetMs } = findItemAtTapePosition(newItems, targetMs);
+        await playItemAtRef.current?.(itemIdx, offsetMs);
+      }
     } finally {
       isFlippingRef.current = false;
+      // fill noise 끝난 후 반대 사이드 처음부터 자동 재생
+      if (shouldFlipBack) flipSideRef.current?.(MAX_SIDE_MS);
     }
   }, [cancelAll, getItems]);
 
