@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, Platform,
 } from "react-native";
@@ -20,8 +20,8 @@ export default function PlayerScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const {
-    sideA, sideB, currentSide, currentTrack, currentItemIdx,
-    isPlaying, isLoading, isPlayingNoise, position,
+    sideA, sideB, currentSide, currentTrack,
+    isPlaying, isLoading, isPlayingNoise, tapePosition,
     togglePlayPause,
     seekForward, seekBackward, startFastForward, stopFastForward, flipSide,
   } = useAudioPlayerContext();
@@ -45,19 +45,10 @@ export default function PlayerScreen() {
 
   const sideATracks = sideA.filter((it): it is TrackItem => it.type === "track");
   const sideBTracks = sideB.filter((it): it is TrackItem => it.type === "track");
-  const activeItems = currentSide === "A" ? sideA : sideB;
   const activeTracks = currentSide === "A" ? sideATracks : sideBTracks;
   const hasTracks = activeTracks.length > 0;
   const trackTitles = activeTracks.map((t) => t.title);
   const sideColor = currentSide === "A" ? "#c0524a" : "#4a80c0";
-
-  const tapePosition = useMemo(() => {
-    if (currentItemIdx < 0) return 0;
-    const beforeMs = activeItems
-      .slice(0, currentItemIdx)
-      .reduce((s, it) => s + it.duration, 0);
-    return beforeMs + position;
-  }, [activeItems, currentItemIdx, position]);
 
   return (
     <View style={[styles.container, { paddingTop: topPad, paddingBottom: bottomPad }]}>

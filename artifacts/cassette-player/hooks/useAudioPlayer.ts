@@ -96,6 +96,7 @@ export interface UseAudioPlayerReturn {
   position: number;
   duration: number;
   progress: number;
+  tapePosition: number;
   togglePlayPause: () => Promise<void>;
   play: () => Promise<void>;
   pause: () => Promise<void>;
@@ -126,9 +127,11 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const [isAdding, setIsAdding] = useState(false);
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [tapePosition, setTapePosition] = useState(0);
   const positionRef = useRef(0);
   const durationRef = useRef(0);
   const isSeekingRef = useRef(false);
+  const noiseTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const soundRef = useRef<Audio.Sound | null>(null);
   const noiseRef = useRef<Audio.Sound | null>(null);
@@ -145,6 +148,27 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   const getItems = useCallback((side: Side): SideItem[] =>
     side === "A" ? sideARef.current : sideBRef.current, []);
+
+  // 아이템 배열 + 현재 인덱스 + 트랙 내 위치로 테이프 위치(ms) 계산
+  const computeTapePos = useCallback((side: Side, itemIdx: number, trackPos: number): number => {
+    const items = side === "A" ? sideARef.current : sideBRef.current;
+    if (itemIdx < 0 || itemIdx >= items.length) return 0;
+    return items.slice(0, itemIdx).reduce((s, it) => s + it.duration, 0) + trackPos;
+  }, []);
+
+  // 노이즈 재생 시 테이프 위치를 실시간으로 업데이트 (UI 표시 전용)
+  const startNoiseTick = useCallback((baseTapePos: number) => {
+    if (noiseTickRef.current) clearInterval(noiseTickRef.current);
+    const startedAt = Date.now();
+    setTapePosition(baseTapePos);
+    noiseTickRef.current = setInterval(() => {
+      setTapePosition(Math.min(baseTapePos + (Date.now() - startedAt), MAX_SIDE_MS));
+    }, 250);
+  }, []);
+
+  const stopNoiseTick = useCallback(() => {
+    if (noiseTickRef.current) { clearInterval(noiseTickRef.current); noiseTickRef.current = null; }
+  }, []);
 
   const saveItems = useCallback((side: Side, items: SideItem[]) => {
     if (side === "A") { setSideA(items); AsyncStorage.setItem(KEY_A, JSON.stringify(items)); }
@@ -271,7 +295,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         itemIdxRef.current = -1;
         setIsPlayingNoise(true);
         setIsPlaying(true);
+        startNoiseTick(used); // fill noise는 콘텐츠 총합 위치에서 시작
         playNoiseDuration(fillMs).then((done) => {
+          stopNoiseTick();
           setIsPlayingNoise(false);
           if (done) {
             // 테이프 끝 → 반대 사이드 처음부터 자동 재생
@@ -285,7 +311,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       return;
     }
     playItemAtRef.current?.(next);
-  }, [getItems]);
+  }, [getItems, startNoiseTick, stopNoiseTick]);
 
   const onPlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
     if (!status.isLoaded) return;
@@ -293,10 +319,12 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     durationRef.current = status.durationMillis ?? 0;
     setPosition(status.positionMillis);
     setDuration(status.durationMillis ?? 0);
+    // 트랙 재생 중 테이프 위치 업데이트
+    setTapePosition(computeTapePos(sideRef.current, itemIdxRef.current, status.positionMillis));
     // seek 중에는 isPlaying 업데이트 생략 (FF/RW 시 Play/Pause 버튼 flickering 방지)
     if (!isSeekingRef.current) setIsPlaying(status.isPlaying);
     if (status.didJustFinish && !cancelRef.current) advance();
-  }, [advance]);
+  }, [advance, computeTapePos]);
 
   const playItemAt = useCallback(async (idx: number, initialPositionMs?: number) => {
     if (cancelRef.current) return;
@@ -311,9 +339,12 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       setIsPlaying(true);
       setPosition(0);
       setDuration(item.duration);
+      // 노이즈 시작 테이프 위치 = 앞 아이템 총합 + offset
+      startNoiseTick(computeTapePos(sideRef.current, idx, initialPositionMs ?? 0));
       // 플립으로 noise 중간에 진입한 경우 남은 시간만 재생
       const remainingMs = initialPositionMs ? Math.max(0, item.duration - initialPositionMs) : item.duration;
       const done = await playNoiseDuration(remainingMs);
+      stopNoiseTick();
       setIsPlayingNoise(false);
       if (done) advance();
     } else {
@@ -323,29 +354,37 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       setDuration(0);
       try {
         await stopTrack();
+        if (cancelRef.current) return;
         const startPos = initialPositionMs ?? 0;
+        // shouldPlay:true + positionMillis 로 원자적 seek-and-play
+        // (play 시작 후 위치 확인하여 seek이 안 됐으면 보정)
         const { sound } = await Audio.Sound.createAsync(
           { uri: item.uri },
-          // positionMillis: 일부 기기에서 createAsync 시점에 seek 적용
-          { shouldPlay: false, positionMillis: startPos },
+          { shouldPlay: true, positionMillis: startPos },
           onPlaybackStatusUpdate
         );
         soundRef.current = sound;
-        if (!cancelRef.current) {
-          // setPositionAsync: play 전 명시적 seek (positionMillis 미적용 기기 보완)
-          if (startPos > 0) await sound.setPositionAsync(startPos);
-          await sound.playAsync();
-          // playAsync 후 한 번 더 seek — 재생 상태에서 seek이 더 신뢰도 높음
-          if (startPos > 0) await sound.setPositionAsync(startPos);
-          setIsPlaying(true);
+        if (cancelRef.current) {
+          await sound.stopAsync().catch(() => {});
+          await sound.unloadAsync().catch(() => {});
+          soundRef.current = null;
+          return;
         }
+        // positionMillis가 기기에서 적용 안 됐으면 명시적 seek 보정
+        if (startPos > 0) {
+          const st = await sound.getStatusAsync();
+          if (st.isLoaded && (st.positionMillis ?? 0) < startPos - 500) {
+            await sound.setPositionAsync(startPos);
+          }
+        }
+        setIsPlaying(true);
       } catch (err) {
         console.warn("playItemAt error:", err);
         if (!cancelRef.current) advance();
       }
       setIsLoading(false);
     }
-  }, [getItems, advance, onPlaybackStatusUpdate]);
+  }, [getItems, advance, onPlaybackStatusUpdate, computeTapePos, startNoiseTick, stopNoiseTick]);
 
   useEffect(() => { playItemAtRef.current = playItemAt; }, [playItemAt]);
 
@@ -568,7 +607,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         if (fillMs > 500) {
           setIsPlayingNoise(true);
           setIsPlaying(true);
+          startNoiseTick(targetMs); // 새 사이드의 targetMs 위치에서 노이즈 시작
           const fillDone = await playNoiseDuration(fillMs);
+          stopNoiseTick();
           setIsPlayingNoise(false);
           if (fillDone) shouldFlipBack = true;
         } else {
@@ -583,7 +624,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       // fill noise 끝난 후 반대 사이드 처음부터 자동 재생
       if (shouldFlipBack) flipSideRef.current?.(MAX_SIDE_MS);
     }
-  }, [cancelAll, getItems]);
+  }, [cancelAll, getItems, startNoiseTick, stopNoiseTick]);
 
   useEffect(() => { flipSideRef.current = flipSide; }, [flipSide]);
 
@@ -719,7 +760,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   return {
     sideA, sideB, currentSide, currentItemIdx, currentTrack,
     isPlaying, isPlayingNoise, isLoading, isAdding,
-    position, duration, progress,
+    position, duration, progress, tapePosition,
     togglePlayPause, play, pause, stopPlayback,
     playNext, playPrevious, playItemAt,
     seekTo, seekForward, seekBackward, startFastForward, stopFastForward,
