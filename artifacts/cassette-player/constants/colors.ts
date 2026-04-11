@@ -39,6 +39,33 @@ const colors = {
     cassetteLabelBorder: "#c9a96e",
     cassetteScrew: "#6b4423",
     tape: "#1a0f07",
+
+    // ── Player 리디자인 전용 토큰 ──
+    playerBg: "#e8d5b0",
+    playerCard: "#f5edd8",
+    playerCardBorder: "#e0c99a",
+
+    controlPanel: "#ede0c4",
+    controlPanelBorder: "#d4ba8a",
+
+    btnFlat: "#ddd0b0",
+    btnFlatBorder: "#c4b090",
+    btnFlatPressed: "#cfc0a0",
+    btnFlatIcon: "#5c3a1a",
+
+    btnPlay: "#e07820",
+    btnPlayTop: "#f09040",
+    btnPlayBottom: "#c46010",
+    btnPlayIcon: "#ffffff",
+
+    progressTrack: "#d4c4a0",
+    progressFill: "#e07820",
+
+    flipBtnBg: "#ede0c4",
+    flipBtnBorder: "#c4b090",
+    flipBtnText: "#5c3a1a",
+
+    timeText: "#7a5c30",
   },
   radius: 6,
 };

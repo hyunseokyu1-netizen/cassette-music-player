@@ -14,28 +14,19 @@ interface ControlButtonsProps {
   onFFStop: () => void;
 }
 
-function DeckButton({
+function FlatButton({
   label,
-  subLabel,
   onPress,
   onPressIn,
   onPressOut,
-  active,
   disabled,
-  isLoading,
-  size,
 }: {
   label: string;
-  subLabel: string;
   onPress?: () => void;
   onPressIn?: () => void;
   onPressOut?: () => void;
-  active?: boolean;
   disabled?: boolean;
-  isLoading?: boolean;
-  size?: "normal" | "large";
 }) {
-  const isLarge = size === "large";
   return (
     <Pressable
       onPress={onPress}
@@ -43,41 +34,45 @@ function DeckButton({
       onPressOut={onPressOut}
       disabled={disabled}
       style={({ pressed }) => [
-        styles.button,
-        isLarge && styles.buttonLarge,
-        pressed && styles.buttonPressed,
-        active && styles.buttonActive,
-        disabled && styles.buttonDisabled,
+        styles.flatBtn,
+        pressed && styles.flatBtnPressed,
+        disabled && styles.btnDisabled,
       ]}
     >
-      {({ pressed }) => (
-        <View style={styles.buttonInner}>
-          {isLoading ? (
-            <ActivityIndicator size="small" color={colors.light.cassetteBeige} />
-          ) : (
-            <>
-              <Text style={[
-                styles.label,
-                isLarge && styles.labelLarge,
-                active && styles.labelActive,
-                pressed && !disabled && styles.labelPressed,
-                disabled && styles.labelDisabled,
-              ]}>
-                {label}
-              </Text>
-              <Text style={[
-                styles.subLabel,
-                active && styles.subLabelActive,
-                disabled && styles.subLabelDisabled,
-              ]}>
-                {subLabel}
-              </Text>
-            </>
-          )}
-          {active && <View style={styles.led} />}
-        </View>
-      )}
+      <Text style={[styles.flatLabel, disabled && styles.labelDisabled]}>{label}</Text>
     </Pressable>
+  );
+}
+
+function PlayButton({
+  isPlaying,
+  isLoading,
+  disabled,
+  onPress,
+}: {
+  isPlaying: boolean;
+  isLoading: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    // overflow:hidden으로 Android 리플 클리핑
+    <View style={[styles.playBtnClip, disabled && styles.btnDisabled]}>
+      <Pressable
+        onPress={onPress}
+        disabled={disabled}
+        style={({ pressed }) => [
+          styles.playBtn,
+          pressed && styles.playBtnPressed,
+        ]}
+      >
+        {isLoading ? (
+          <ActivityIndicator size="small" color={colors.light.btnPlayIcon} />
+        ) : (
+          <Text style={styles.playLabel}>{isPlaying ? "❚❚" : "▶"}</Text>
+        )}
+      </Pressable>
+    </View>
   );
 }
 
@@ -118,30 +113,24 @@ export function ControlButtons({
   return (
     <View style={styles.container}>
       <View style={styles.panel}>
-        <View style={styles.panelRidge} />
         <View style={styles.row}>
-          <DeckButton
+          <FlatButton
             label="◄◄"
-            subLabel="REW"
             onPressIn={startRW}
             onPressOut={stopRW}
             disabled={!hasTracks}
           />
-          <DeckButton
-            label={isPlaying ? "‖" : "▶"}
-            subLabel={isPlaying ? "PAUSE" : "PLAY"}
+          <PlayButton
+            isPlaying={isPlaying}
+            isLoading={isLoading}
+            disabled={!hasTracks}
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               onPlayPause();
             }}
-            active={isPlaying}
-            disabled={!hasTracks}
-            isLoading={isLoading}
-            size="large"
           />
-          <DeckButton
+          <FlatButton
             label="▶▶"
-            subLabel="FF"
             onPressIn={handleFFStart}
             onPressOut={handleFFStop}
             disabled={!hasTracks}
@@ -152,138 +141,91 @@ export function ControlButtons({
   );
 }
 
-const BTN_BG = "#3a2510";
-const BTN_TOP = "#5c3820";
-const BTN_BOTTOM = "#1a0e06";
-const BTN_ACTIVE_BG = "#6b3412";
-const BTN_ACTIVE_TOP = "#a05828";
-
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     paddingHorizontal: 24,
   },
   panel: {
-    backgroundColor: colors.light.card,
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderTopWidth: 2,
-    borderLeftWidth: 1,
-    borderTopColor: colors.light.border,
-    borderLeftColor: colors.light.border,
-    borderBottomWidth: 3,
-    borderRightWidth: 2,
-    borderBottomColor: colors.light.cassetteDark,
-    borderRightColor: colors.light.cassetteDark,
+    backgroundColor: colors.light.controlPanel,
+    borderRadius: 28,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderWidth: 1,
+    borderColor: colors.light.controlPanelBorder,
     width: "100%",
-  },
-  panelRidge: {
-    position: "absolute",
-    top: 0,
-    left: 20,
-    right: 20,
-    height: 3,
-    backgroundColor: colors.light.border,
-    borderBottomLeftRadius: 2,
-    borderBottomRightRadius: 2,
-    opacity: 0.5,
+    elevation: 2,
+    shadowColor: "rgba(80,40,10,0.12)",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 1,
+    shadowRadius: 6,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 14,
+    gap: 16,
   },
 
-  button: {
-    width: 68,
-    height: 60,
-    borderRadius: 6,
-    backgroundColor: BTN_BG,
-    borderTopWidth: 2,
-    borderLeftWidth: 1,
-    borderTopColor: BTN_TOP,
-    borderLeftColor: BTN_TOP,
-    borderBottomWidth: 3,
-    borderRightWidth: 2,
-    borderBottomColor: BTN_BOTTOM,
-    borderRightColor: BTN_BOTTOM,
-  },
-  buttonLarge: {
-    width: 84,
-    height: 72,
-    borderRadius: 8,
-  },
-  buttonPressed: {
-    borderTopColor: BTN_BOTTOM,
-    borderLeftColor: BTN_BOTTOM,
-    borderBottomColor: BTN_TOP,
-    borderRightColor: BTN_TOP,
-    transform: [{ translateY: 2 }],
-  },
-  buttonActive: {
-    backgroundColor: BTN_ACTIVE_BG,
-    borderTopColor: BTN_ACTIVE_TOP,
-    borderLeftColor: BTN_ACTIVE_TOP,
-    borderBottomColor: BTN_BOTTOM,
-    borderRightColor: BTN_BOTTOM,
-  },
-  buttonDisabled: {
-    opacity: 0.35,
-  },
-
-  buttonInner: {
-    flex: 1,
+  // REW / FF 플랫 버튼
+  flatBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    backgroundColor: colors.light.btnFlat,
+    borderWidth: 1,
+    borderColor: colors.light.btnFlatBorder,
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-    position: "relative",
+  },
+  flatBtnPressed: {
+    backgroundColor: colors.light.btnFlatPressed,
+    transform: [{ scale: 0.96 }],
+  },
+  flatLabel: {
+    fontSize: 18,
+    color: colors.light.btnFlatIcon,
+    fontFamily: "Inter_700Bold",
+    lineHeight: 22,
   },
 
-  label: {
-    fontSize: 20,
-    color: colors.light.mutedForeground,
-    fontFamily: "Inter_700Bold",
-    lineHeight: 24,
+  // PLAY / PAUSE 오렌지 버튼
+  playBtnClip: {
+    borderRadius: 32,
+    overflow: "hidden",
   },
-  labelLarge: {
+  playBtn: {
+    width: 72,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: colors.light.btnPlay,
+    borderTopWidth: 2,
+    borderTopColor: colors.light.btnPlayTop,
+    borderBottomWidth: 3,
+    borderBottomColor: colors.light.btnPlayBottom,
+    borderLeftWidth: 1,
+    borderLeftColor: "#e88030",
+    borderRightWidth: 1,
+    borderRightColor: colors.light.btnPlayBottom,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  playBtnPressed: {
+    borderTopColor: colors.light.btnPlayBottom,
+    borderBottomColor: colors.light.btnPlayTop,
+    transform: [{ translateY: 2 }],
+  },
+  playLabel: {
     fontSize: 26,
-    lineHeight: 30,
+    color: colors.light.btnPlayIcon,
+    fontFamily: "Inter_700Bold",
+    lineHeight: 32,
   },
-  labelActive: {
-    color: colors.light.cassetteBeige,
-  },
-  labelPressed: {
-    opacity: 0.75,
+
+  btnDisabled: {
+    opacity: 0.38,
   },
   labelDisabled: {
-    color: colors.light.border,
-  },
-
-  subLabel: {
-    fontSize: 8,
-    color: colors.light.mutedForeground,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 1.5,
-    opacity: 0.6,
-  },
-  subLabelActive: {
-    color: colors.light.cassetteBeige,
-    opacity: 0.8,
-  },
-  subLabelDisabled: {
-    color: colors.light.border,
-  },
-
-  led: {
-    position: "absolute",
-    top: 4,
-    right: 5,
-    width: 5,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: colors.light.cassetteBeige,
-    opacity: 0.9,
+    opacity: 0.5,
   },
 });
