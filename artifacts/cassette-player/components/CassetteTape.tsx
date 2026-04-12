@@ -228,7 +228,7 @@ export function CassetteTape({
           return (
             <>
               {renderCol(col1, 0)}
-              <View style={{ width: 1, backgroundColor: "rgba(160,120,60,0.3)", marginHorizontal: 2 * s }} />
+              <View style={{ width: 1, backgroundColor: "transparent", marginHorizontal: 2 * s }} />
               {renderCol(col2, half)}
             </>
           );
