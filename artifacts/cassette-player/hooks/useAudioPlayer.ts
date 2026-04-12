@@ -707,6 +707,13 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     isFlippingRef.current = true;
     await cancelAll();
     cancelRef.current = false;
+
+    // 사이드 표시를 즉시 변경 → 플립 애니메이션과 동기화 (사운드/노이즈 기다리지 않음)
+    const newSide: Side = sideRef.current === "A" ? "B" : "A";
+    setCurrentSide(newSide);
+    sideRef.current = newSide;
+    AsyncStorage.setItem(KEY_SIDE, newSide);
+
     setIsPlayingNoise(true);
     setIsPlaying(true);
     let shouldFlipBack = false;
@@ -715,13 +722,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       const done = await playNoiseDuration(DEFAULT_NOISE_MS);
       setIsPlayingNoise(false);
       if (!done) return;
-      const newSide: Side = sideRef.current === "A" ? "B" : "A";
-      setCurrentSide(newSide);
-      sideRef.current = newSide;
-      AsyncStorage.setItem(KEY_SIDE, newSide);
       setCurrentItemIdx(-1);
       itemIdxRef.current = -1;
-      const newItems = getItems(newSide);
+      const newItems = getItems(newSide); // newSide already set above
       cancelRef.current = false;
       // targetMs: 반대 사이드 테이프 기준 재생 시작 위치 (물리적 테이프 위치 보존)
       const targetMs = Math.max(0, MAX_SIDE_MS - sourceTapePositionMs);
