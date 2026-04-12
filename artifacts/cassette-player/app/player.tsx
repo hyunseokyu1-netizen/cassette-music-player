@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useRef } from "react";
 import {
   View, Text, StyleSheet, TouchableOpacity, Platform,
 } from "react-native";
@@ -43,6 +43,10 @@ export default function PlayerScreen() {
 
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scaleX: scaleX.value }] }));
 
+  // 노이즈 재생 중에도 이전 곡 이름 유지
+  const lastTrackTitleRef = useRef("");
+  if (currentTrack) lastTrackTitleRef.current = currentTrack.title;
+
   const sideATracks = sideA.filter((it): it is TrackItem => it.type === "track");
   const sideBTracks = sideB.filter((it): it is TrackItem => it.type === "track");
   const activeTracks = currentSide === "A" ? sideATracks : sideBTracks;
@@ -81,7 +85,7 @@ export default function PlayerScreen() {
 
       <View style={styles.trackInfo}>
         <Text style={styles.trackTitle} numberOfLines={2}>
-          {currentTrack?.title ?? (hasTracks ? "Tap PLAY to start" : "Open library to add tracks")}
+          {currentTrack?.title ?? (isPlayingNoise ? lastTrackTitleRef.current : (hasTracks ? "Tap PLAY to start" : "Open library to add tracks"))}
         </Text>
         <View style={styles.sideRow}>
           <Text style={[styles.sideCount, sideATracks.length > 0 && { color: "#c0524a" }]}>
