@@ -588,16 +588,19 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     } finally { isSeekingRef.current = false; }
   }, []);
 
-  // FF 전용 사운드 및 스크럽 상태
+  // FF 전용 사운드 및 스크럽 상태 (REW와 동일한 절대 테이프 위치 방식)
   const ffSoundRef = useRef<Audio.Sound | null>(null);
   const ffScrubIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const ffActiveRef = useRef(false);
+  const ffTapePosRef = useRef(0); // FF 중 절대 테이프 위치 추적
 
   const startFastForward = useCallback(async () => {
-    if (ffActiveRef.current || !soundRef.current || isPlayingNoise) return;
+    if (ffActiveRef.current || isPlayingNoise) return;
     ffActiveRef.current = true;
-    // 실제 오디오 일시정지
-    try { await soundRef.current.pauseAsync(); } catch {}
+    // 현재 절대 테이프 위치 캡처
+    ffTapePosRef.current = computeTapePos(sideRef.current, itemIdxRef.current, positionRef.current);
+    // 오디오 일시정지
+    try { await soundRef.current?.pauseAsync(); } catch {}
     // FF 사운드 루프 재생
     try {
       const { sound } = await Audio.Sound.createAsync(
@@ -606,13 +609,12 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       );
       ffSoundRef.current = sound;
     } catch {}
-    // 타임라인 스크럽 (10배속으로 position 업데이트)
+    // 테이프 위치를 10배속으로 앞으로 이동 (트랙 경계 넘어 계속 진행)
     ffScrubIntervalRef.current = setInterval(() => {
       if (!ffActiveRef.current) return;
-      const next = Math.min(positionRef.current + 1000, durationRef.current);
-      positionRef.current = next;
-      setPosition(next);
-      setTapePosition(computeTapePos(sideRef.current, itemIdxRef.current, next));
+      const next = Math.min(ffTapePosRef.current + 1000, MAX_SIDE_MS);
+      ffTapePosRef.current = next;
+      setTapePosition(next);
     }, 100);
   }, [isPlayingNoise, computeTapePos]);
 
@@ -628,14 +630,14 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       try { await ffSoundRef.current.stopAsync(); await ffSoundRef.current.unloadAsync(); } catch {}
       ffSoundRef.current = null;
     }
-    // 실제 오디오를 스크럽된 위치로 seek 후 재생
-    if (soundRef.current && !cancelRef.current) {
-      try {
-        await soundRef.current.setPositionAsync(positionRef.current);
-        await soundRef.current.playAsync();
-      } catch {}
-    }
-  }, []);
+    // 새 테이프 위치에서 재생 (이전 곡과 동일한 방식으로 트랙+오프셋 계산)
+    const targetMs = ffTapePosRef.current;
+    const items = getItems(sideRef.current);
+    cancelRef.current = false;
+    if (items.length === 0) { setIsPlaying(false); return; }
+    const { itemIdx, offsetMs } = findItemAtTapePosition(items, targetMs);
+    await playItemAtRef.current?.(itemIdx, offsetMs);
+  }, [getItems]);
 
   // REW 전용 사운드 및 스크럽 상태
   const rwSoundRef = useRef<Audio.Sound | null>(null);
