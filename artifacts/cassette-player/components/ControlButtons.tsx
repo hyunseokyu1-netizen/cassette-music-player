@@ -8,10 +8,10 @@ interface ControlButtonsProps {
   isLoading: boolean;
   hasTracks: boolean;
   onPlayPause: () => void;
-  onFastForward: (seconds: number) => void;
-  onRewind: (seconds: number) => void;
   onFFStart: () => void;
   onFFStop: () => void;
+  onRWStart: () => void;
+  onRWStop: () => void;
 }
 
 function DeckButton({
@@ -83,17 +83,8 @@ function DeckButton({
 
 export function ControlButtons({
   isPlaying, isLoading, hasTracks,
-  onPlayPause, onFastForward, onRewind, onFFStart, onFFStop,
+  onPlayPause, onFFStart, onFFStop, onRWStart, onRWStop,
 }: ControlButtonsProps) {
-  const rwRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const holdStart = useRef(0);
-
-  const getSeek = () => {
-    const held = Date.now() - holdStart.current;
-    if (held < 800) return 3;
-    if (held < 2500) return 7;
-    return 15;
-  };
 
   const handleFFStart = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -104,16 +95,14 @@ export function ControlButtons({
     onFFStop();
   }, [onFFStop]);
 
-  const startRW = useCallback(() => {
+  const handleRWStart = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    holdStart.current = Date.now();
-    onRewind(getSeek());
-    rwRef.current = setInterval(() => onRewind(getSeek()), 300);
-  }, [onRewind]);
+    onRWStart();
+  }, [onRWStart]);
 
-  const stopRW = () => {
-    if (rwRef.current) { clearInterval(rwRef.current); rwRef.current = null; }
-  };
+  const handleRWStop = useCallback(() => {
+    onRWStop();
+  }, [onRWStop]);
 
   return (
     <View style={styles.container}>
@@ -123,8 +112,8 @@ export function ControlButtons({
           <DeckButton
             label="◄◄"
             subLabel="REW"
-            onPressIn={startRW}
-            onPressOut={stopRW}
+            onPressIn={handleRWStart}
+            onPressOut={handleRWStop}
             disabled={!hasTracks}
           />
           <DeckButton

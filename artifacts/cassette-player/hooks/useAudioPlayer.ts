@@ -167,6 +167,8 @@ export interface UseAudioPlayerReturn {
   seekBackward: (s?: number) => Promise<void>;
   startFastForward: () => Promise<void>;
   stopFastForward: () => Promise<void>;
+  startRewind: () => Promise<void>;
+  stopRewind: () => Promise<void>;
   flipSide: (tapePositionMs?: number) => Promise<void>;
   addToSide: (side: Side) => Promise<void>;
   removeTrackItem: (side: Side, trackId: string) => void;
@@ -610,8 +612,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       const next = Math.min(positionRef.current + 1000, durationRef.current);
       positionRef.current = next;
       setPosition(next);
+      setTapePosition(computeTapePos(sideRef.current, itemIdxRef.current, next));
     }, 100);
-  }, [isPlayingNoise]);
+  }, [isPlayingNoise, computeTapePos]);
 
   const stopFastForward = useCallback(async () => {
     if (!ffActiveRef.current) return;
@@ -633,6 +636,57 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       } catch {}
     }
   }, []);
+
+  // REW 전용 사운드 및 스크럽 상태
+  const rwSoundRef = useRef<Audio.Sound | null>(null);
+  const rwScrubIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rwActiveRef = useRef(false);
+  const rwTapePosRef = useRef(0); // REW 중 절대 테이프 위치 추적
+
+  const startRewind = useCallback(async () => {
+    if (rwActiveRef.current || isPlayingNoise) return;
+    rwActiveRef.current = true;
+    // 현재 절대 테이프 위치 캡처
+    rwTapePosRef.current = computeTapePos(sideRef.current, itemIdxRef.current, positionRef.current);
+    // 오디오 일시정지
+    try { await soundRef.current?.pauseAsync(); } catch {}
+    // 테이프 되감기 사운드 루프 재생
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("../assets/sounds/tape-ff.wav"),
+        { shouldPlay: true, isLooping: true, volume: 0.85 }
+      );
+      rwSoundRef.current = sound;
+    } catch {}
+    // 테이프 위치를 10배속으로 뒤로 이동
+    rwScrubIntervalRef.current = setInterval(() => {
+      if (!rwActiveRef.current) return;
+      const next = Math.max(0, rwTapePosRef.current - 1000);
+      rwTapePosRef.current = next;
+      setTapePosition(next);
+    }, 100);
+  }, [isPlayingNoise, computeTapePos]);
+
+  const stopRewind = useCallback(async () => {
+    if (!rwActiveRef.current) return;
+    rwActiveRef.current = false;
+    if (rwScrubIntervalRef.current) {
+      clearInterval(rwScrubIntervalRef.current);
+      rwScrubIntervalRef.current = null;
+    }
+    // 테이프 사운드 정지
+    if (rwSoundRef.current) {
+      try { await rwSoundRef.current.stopAsync(); await rwSoundRef.current.unloadAsync(); } catch {}
+      rwSoundRef.current = null;
+    }
+    // 새 테이프 위치에서 재생 (이전 곡 포함하여 올바른 트랙+오프셋으로)
+    const targetMs = rwTapePosRef.current;
+    const items = getItems(sideRef.current);
+    cancelRef.current = false;
+    if (items.length === 0) { setIsPlaying(false); return; }
+    const { itemIdx, offsetMs } = findItemAtTapePosition(items, targetMs);
+    await playItemAtRef.current?.(itemIdx, offsetMs);
+  }, [getItems]);
 
   const playFlipSound = async () => {
     try {
@@ -833,7 +887,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     position, duration, progress, tapePosition,
     togglePlayPause, play, pause, stopPlayback,
     playNext, playPrevious, playItemAt,
-    seekTo, seekForward, seekBackward, startFastForward, stopFastForward,
+    seekTo, seekForward, seekBackward, startFastForward, stopFastForward, startRewind, stopRewind,
     flipSide, addToSide, removeTrackItem, updateNoiseDuration, setSide,
   };
 }
