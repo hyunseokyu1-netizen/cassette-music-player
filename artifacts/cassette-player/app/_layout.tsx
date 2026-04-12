@@ -25,13 +25,14 @@ function RootLayoutNav() {
     <Stack
       screenOptions={{
         headerShown: false,
+        contentStyle: { backgroundColor: "#2c1a0e" },
         animation: "slide_from_right",
       }}
     >
-      <Stack.Screen name="index" options={{ headerShown: false, contentStyle: { backgroundColor: "#e8d5b0" } }} />
-      <Stack.Screen name="player" options={{ headerShown: false, contentStyle: { backgroundColor: "#e8d5b0" } }} />
-      <Stack.Screen name="library" options={{ headerShown: false, contentStyle: { backgroundColor: "#2c1a0e" } }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false, contentStyle: { backgroundColor: "#2c1a0e" } }} />
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="player" options={{ headerShown: false }} />
+      <Stack.Screen name="library" options={{ headerShown: false }} />
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
     </Stack>
   );
 }
