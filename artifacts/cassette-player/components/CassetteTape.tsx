@@ -193,39 +193,43 @@ export function CassetteTape({
           top: labelY + 22 * s,
           width: labelW - 12 * s,
           height: 42 * s,
+          flexDirection: "row",
           overflow: "hidden",
         }}
       >
         {(() => {
           const availableH = 42 * s;
-          const titleFontSize = Math.min(9.5 * s, 9.5 * s);
-          const titleLineH = titleFontSize * 1.25 + 2;
-          const remainingH = availableH - titleLineH;
+          const colW = (labelW - 16 * s) / 2;
           const count = tracks.length;
-          const rawTrackFont = count > 0
-            ? Math.min(7.5 * s, remainingH / (count * 1.2))
-            : 7.5 * s;
-          const trackFontSize = Math.max(5, rawTrackFont);
-          const trackLineH = trackFontSize * 1.2;
+          const half = Math.ceil(count / 2);
+          const rowsPerCol = Math.max(1, half);
+          const rawFont = Math.min(7.5 * s, availableH / (rowsPerCol * 1.2));
+          const fontSize = Math.max(5, rawFont);
+          const lineH = fontSize * 1.2;
+          const col1 = tracks.slice(0, half);
+          const col2 = tracks.slice(half);
+          const renderCol = (items: string[], offset: number) => (
+            <View style={{ width: colW, overflow: "hidden" }}>
+              {items.length === 0
+                ? <Text style={[styles.trackLine, { fontSize, lineHeight: lineH }]}>—</Text>
+                : items.map((t, i) => (
+                  <Text
+                    key={i}
+                    style={[styles.trackLine, { fontSize, lineHeight: lineH }]}
+                    numberOfLines={1}
+                    ellipsizeMode="tail"
+                  >
+                    {`${offset + i + 1}. ${t}`}
+                  </Text>
+                ))
+              }
+            </View>
+          );
           return (
             <>
-              <Text
-                style={[styles.trackTitle, { fontSize: titleFontSize, lineHeight: titleLineH }]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {title || "NO TRACK LOADED"}
-              </Text>
-              {tracks.map((t, i) => (
-                <Text
-                  key={i}
-                  style={[styles.trackLine, { fontSize: trackFontSize, lineHeight: trackLineH }]}
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                >
-                  {`${i + 1}. ${t}`}
-                </Text>
-              ))}
+              {renderCol(col1, 0)}
+              <View style={{ width: 1, backgroundColor: "rgba(160,120,60,0.3)", marginHorizontal: 2 * s }} />
+              {renderCol(col2, half)}
             </>
           );
         })()}
