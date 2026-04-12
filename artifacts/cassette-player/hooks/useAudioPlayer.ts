@@ -719,9 +719,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     let shouldFlipBack = false;
     try {
       await playFlipSound();
-      const done = await playNoiseDuration(DEFAULT_NOISE_MS);
       setIsPlayingNoise(false);
-      if (!done) return;
       setCurrentItemIdx(-1);
       itemIdxRef.current = -1;
       const newItems = getItems(newSide); // newSide already set above
