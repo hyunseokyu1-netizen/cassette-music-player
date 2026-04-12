@@ -14,11 +14,22 @@ async function setupNotificationChannel() {
   try {
     await Notifications.setNotificationChannelAsync("playback", {
       name: "재생 중",
-      importance: Notifications.AndroidImportance.LOW,
+      importance: Notifications.AndroidImportance.DEFAULT,
       showBadge: false,
       sound: null,
       vibrationPattern: null,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     });
+    // 재생 중 카테고리: ⏸ 일시정지 + ⏭ 다음
+    await Notifications.setNotificationCategoryAsync("playing", [
+      { identifier: "pause", buttonTitle: "⏸", options: { opensAppToForeground: false } },
+      { identifier: "next",  buttonTitle: "⏭", options: { opensAppToForeground: false } },
+    ]);
+    // 일시정지 카테고리: ▶ 재생 + ⏭ 다음
+    await Notifications.setNotificationCategoryAsync("paused", [
+      { identifier: "play", buttonTitle: "▶", options: { opensAppToForeground: false } },
+      { identifier: "next",  buttonTitle: "⏭", options: { opensAppToForeground: false } },
+    ]);
   } catch {}
 }
 
@@ -29,9 +40,10 @@ async function showPlaybackNotification(title: string) {
       identifier: PLAYBACK_NOTIFICATION_ID,
       content: {
         title: "Cassette Player",
-        body: `▶ ${title || "재생 중..."}`,
+        body: title || "재생 중...",
         sticky: true,
         autoDismiss: false,
+        categoryIdentifier: "playing",
         data: {},
       },
       trigger: null,
@@ -46,9 +58,10 @@ async function updatePlaybackNotification(title: string, isPlaying: boolean) {
       identifier: PLAYBACK_NOTIFICATION_ID,
       content: {
         title: "Cassette Player",
-        body: `${isPlaying ? "▶" : "⏸"} ${title || ""}`,
+        body: title || "",
         sticky: true,
         autoDismiss: false,
+        categoryIdentifier: isPlaying ? "playing" : "paused",
         data: {},
       },
       trigger: null,
