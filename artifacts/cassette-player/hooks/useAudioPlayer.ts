@@ -714,6 +714,10 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     sideRef.current = newSide;
     AsyncStorage.setItem(KEY_SIDE, newSide);
 
+    // 진행바를 목표 위치로 즉시 설정 (cancelAll 후 0으로 깜빡이는 것 방지)
+    const targetMsImmediate = Math.max(0, MAX_SIDE_MS - sourceTapePositionMs);
+    setTapePosition(targetMsImmediate);
+
     setIsPlayingNoise(true);
     setIsPlaying(true);
     let shouldFlipBack = false;
