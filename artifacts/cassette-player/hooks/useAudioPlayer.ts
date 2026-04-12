@@ -2,8 +2,66 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Audio, AVPlaybackStatus } from "expo-av";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system";
+import * as Notifications from "expo-notifications";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, AppState } from "react-native";
+import { Alert, AppState, Platform } from "react-native";
+
+// Android Doze 방지용 재생 알림 (Foreground Service 유지)
+const PLAYBACK_NOTIFICATION_ID = "cassette-playback";
+
+async function setupNotificationChannel() {
+  if (Platform.OS !== "android") return;
+  try {
+    await Notifications.setNotificationChannelAsync("playback", {
+      name: "재생 중",
+      importance: Notifications.AndroidImportance.LOW,
+      showBadge: false,
+      sound: null,
+      vibrationPattern: null,
+    });
+  } catch {}
+}
+
+async function showPlaybackNotification(title: string) {
+  if (Platform.OS !== "android") return;
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: PLAYBACK_NOTIFICATION_ID,
+      content: {
+        title: "Cassette Player",
+        body: `▶ ${title || "재생 중..."}`,
+        sticky: true,
+        autoDismiss: false,
+        data: {},
+      },
+      trigger: null,
+    });
+  } catch {}
+}
+
+async function updatePlaybackNotification(title: string, isPlaying: boolean) {
+  if (Platform.OS !== "android") return;
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: PLAYBACK_NOTIFICATION_ID,
+      content: {
+        title: "Cassette Player",
+        body: `${isPlaying ? "▶" : "⏸"} ${title || ""}`,
+        sticky: true,
+        autoDismiss: false,
+        data: {},
+      },
+      trigger: null,
+    });
+  } catch {}
+}
+
+async function dismissPlaybackNotification() {
+  if (Platform.OS !== "android") return;
+  try {
+    await Notifications.dismissNotificationAsync(PLAYBACK_NOTIFICATION_ID);
+  } catch {}
+}
 
 export type Side = "A" | "B";
 
@@ -183,6 +241,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       shouldDuckAndroid: false,
       playThroughEarpieceAndroid: false,
     });
+    // Android Doze 방지 알림 채널 설정 + 권한 요청
+    setupNotificationChannel();
+    Notifications.requestPermissionsAsync().catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -218,6 +279,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setIsPlayingNoise(false);
     setPosition(0);
     setDuration(0);
+    dismissPlaybackNotification();
   }, []);
 
   // tape-noise.wav 길이 (7.92s). seekMs = NOISE_FILE_MS - durationMs 위치에서
@@ -378,6 +440,8 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
           }
         }
         setIsPlaying(true);
+        // Doze 방지 알림 표시 (Foreground Service 유지)
+        showPlaybackNotification(item.title);
       } catch (err) {
         console.warn("playItemAt error:", err);
         if (!cancelRef.current) advance();
@@ -429,12 +493,18 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       await stopNoise();
       setIsPlayingNoise(false);
       setIsPlaying(false);
+      dismissPlaybackNotification();
       return;
     }
     if (!isPlaying) return;
     await soundRef.current?.pauseAsync();
     setIsPlaying(false);
-  }, [isPlaying, isPlayingNoise]);
+    // 일시정지 시 알림을 ⏸ 상태로 업데이트
+    const items = getItems(sideRef.current);
+    const cur = items[itemIdxRef.current];
+    const title = cur?.type === "track" ? cur.title : "";
+    updatePlaybackNotification(title, false);
+  }, [isPlaying, isPlayingNoise, getItems]);
 
   const stopPlayback = useCallback(async () => {
     await cancelAll();
