@@ -192,16 +192,43 @@ export function CassetteTape({
           left: labelX + 6 * s,
           top: labelY + 22 * s,
           width: labelW - 12 * s,
+          height: 42 * s,
+          overflow: "hidden",
         }}
       >
-        <Text style={[styles.trackTitle, { fontSize: 9.5 * s }]} numberOfLines={1}>
-          {title || "NO TRACK LOADED"}
-        </Text>
-        {tracks.slice(0, 3).map((t, i) => (
-          <Text key={i} style={[styles.trackLine, { fontSize: 7.5 * s }]} numberOfLines={1}>
-            {`${i + 1}. ${t}`}
-          </Text>
-        ))}
+        {(() => {
+          const availableH = 42 * s;
+          const titleFontSize = Math.min(9.5 * s, 9.5 * s);
+          const titleLineH = titleFontSize * 1.25 + 2;
+          const remainingH = availableH - titleLineH;
+          const count = tracks.length;
+          const rawTrackFont = count > 0
+            ? Math.min(7.5 * s, remainingH / (count * 1.2))
+            : 7.5 * s;
+          const trackFontSize = Math.max(5, rawTrackFont);
+          const trackLineH = trackFontSize * 1.2;
+          return (
+            <>
+              <Text
+                style={[styles.trackTitle, { fontSize: titleFontSize, lineHeight: titleLineH }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {title || "NO TRACK LOADED"}
+              </Text>
+              {tracks.map((t, i) => (
+                <Text
+                  key={i}
+                  style={[styles.trackLine, { fontSize: trackFontSize, lineHeight: trackLineH }]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {`${i + 1}. ${t}`}
+                </Text>
+              ))}
+            </>
+          );
+        })()}
       </View>
 
       <View
