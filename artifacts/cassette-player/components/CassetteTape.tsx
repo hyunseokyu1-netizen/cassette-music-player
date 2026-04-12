@@ -56,8 +56,8 @@ export function CassetteTape({
     { x: 323 * s, y: 184 * s },
   ];
 
-  const labelX = 32 * s, labelY = 122 * s;
-  const labelW = 276 * s, labelH = 64 * s;
+  const labelX = 32 * s, labelY = 118 * s;
+  const labelW = 276 * s, labelH = 72 * s;
   const sideColor = side === "A" ? "#7a2d2d" : "#1e3d6e";
   const sideBg = side === "A" ? "#9e3c3c" : "#2b5499";
 
@@ -192,7 +192,7 @@ export function CassetteTape({
           left: labelX + 6 * s,
           top: labelY + 22 * s,
           width: labelW - 12 * s,
-          height: 42 * s,
+          height: 50 * s,
           flexDirection: "row",
           overflow: "hidden",
         }}

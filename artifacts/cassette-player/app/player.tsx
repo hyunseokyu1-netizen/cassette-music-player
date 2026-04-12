@@ -78,7 +78,7 @@ export default function PlayerScreen() {
             side={currentSide}
             title={currentTrack?.title ?? ""}
             tracks={trackTitles}
-            width={304}
+            width={320}
           />
         </Animated.View>
       </View>
