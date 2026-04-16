@@ -33,13 +33,16 @@ export default function PlayerScreen() {
 
   const handleFlip = useCallback(async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    // FF/REW 진행 중이면 먼저 중단
+    await stopFastForward();
+    await stopRewind();
     const currentTapePos = tapePosition;
     scaleX.value = withSequence(
       withTiming(0, { duration: 180 }),
       withTiming(1, { duration: 180 })
     );
     setTimeout(() => flipSide(currentTapePos), 180);
-  }, [flipSide, tapePosition]);
+  }, [flipSide, tapePosition, stopFastForward, stopRewind]);
 
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scaleX: scaleX.value }] }));
 

@@ -404,8 +404,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     const tp = computeTapePos(sideRef.current, itemIdxRef.current, status.positionMillis);
     tapePositionRef.current = tp;
     setTapePosition(tp);
-    // seek 중에는 isPlaying 업데이트 생략 (FF/RW 시 Play/Pause 버튼 flickering 방지)
-    if (!isSeekingRef.current) setIsPlaying(status.isPlaying);
+    // seek 중이거나 트랙이 끝난 순간에는 isPlaying 업데이트 생략
+    // (FF/RW flickering 방지, 트랙 끝→다음 곡 전환 시 버튼이 PAUSE로 바뀌는 현상 방지)
+    if (!isSeekingRef.current && !status.didJustFinish) setIsPlaying(status.isPlaying);
     if (status.didJustFinish && !cancelRef.current) advance();
   }, [advance, computeTapePos]);
 

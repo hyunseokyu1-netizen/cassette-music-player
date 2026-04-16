@@ -249,6 +249,7 @@ export function CassetteTape({
           radius={leftRadius * s}
           maxRadius={MAX_SPOOL_R * s}
           isPlaying={isPlaying || isTransitioning}
+          clockwise={side === "B"}
         />
       </View>
 
@@ -266,6 +267,7 @@ export function CassetteTape({
           radius={rightRadius * s}
           maxRadius={MAX_SPOOL_R * s}
           isPlaying={isPlaying || isTransitioning}
+          clockwise={side === "A"}
         />
       </View>
     </View>
