@@ -162,6 +162,8 @@ export interface UseAudioPlayerReturn {
   currentTrack: TrackItem | null;
   isPlaying: boolean;
   isPlayingNoise: boolean;
+  isFastForward: boolean;
+  isRewind: boolean;
   isLoading: boolean;
   isAdding: boolean;
   position: number;
@@ -196,6 +198,8 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const [currentItemIdx, setCurrentItemIdx] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPlayingNoise, setIsPlayingNoise] = useState(false);
+  const [isFastForward, setIsFastForward] = useState(false);
+  const [isRewind, setIsRewind] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [position, setPosition] = useState(0);
@@ -366,6 +370,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   const advance = useCallback(() => {
     if (cancelRef.current || isFlippingRef.current) return;
+    setIsPlaying(true); // 트랙 전환 중 버튼 ▶ 깜빡임 방지 (React 배치로 false→true 한 번에 처리)
     const items = getItems(sideRef.current);
     const next = itemIdxRef.current + 1;
     if (next >= items.length) {
@@ -404,9 +409,8 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     const tp = computeTapePos(sideRef.current, itemIdxRef.current, status.positionMillis);
     tapePositionRef.current = tp;
     setTapePosition(tp);
-    // seek 중이거나 트랙이 끝난 순간에는 isPlaying 업데이트 생략
-    // (FF/RW flickering 방지, 트랙 끝→다음 곡 전환 시 버튼이 PAUSE로 바뀌는 현상 방지)
-    if (!isSeekingRef.current && !status.didJustFinish) setIsPlaying(status.isPlaying);
+    // seek 중에는 isPlaying 업데이트 생략 (FF/RW 시 Play/Pause 버튼 flickering 방지)
+    if (!isSeekingRef.current) setIsPlaying(status.isPlaying);
     if (status.didJustFinish && !cancelRef.current) advance();
   }, [advance, computeTapePos]);
 
@@ -619,6 +623,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const startFastForward = useCallback(async () => {
     if (ffActiveRef.current) return;
     ffActiveRef.current = true;
+    setIsFastForward(true);
     // 노이즈 재생 중이면 먼저 중단
     if (cancelRef.current === false) {
       cancelRef.current = true;
@@ -651,6 +656,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const stopFastForward = useCallback(async () => {
     if (!ffActiveRef.current) return;
     ffActiveRef.current = false;
+    setIsFastForward(false);
     if (ffScrubIntervalRef.current) {
       clearInterval(ffScrubIntervalRef.current);
       ffScrubIntervalRef.current = null;
@@ -680,6 +686,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const startRewind = useCallback(async () => {
     if (rwActiveRef.current) return;
     rwActiveRef.current = true;
+    setIsRewind(true);
     // 노이즈 재생 중이면 먼저 중단
     if (cancelRef.current === false) {
       cancelRef.current = true;
@@ -712,6 +719,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const stopRewind = useCallback(async () => {
     if (!rwActiveRef.current) return;
     rwActiveRef.current = false;
+    setIsRewind(false);
     if (rwScrubIntervalRef.current) {
       clearInterval(rwScrubIntervalRef.current);
       rwScrubIntervalRef.current = null;
@@ -946,7 +954,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   return {
     sideA, sideB, currentSide, currentItemIdx, currentTrack,
-    isPlaying, isPlayingNoise, isLoading, isAdding,
+    isPlaying, isPlayingNoise, isFastForward, isRewind, isLoading, isAdding,
     position, duration, progress, tapePosition,
     togglePlayPause, play, pause, stopPlayback,
     playNext, playPrevious, playItemAt,

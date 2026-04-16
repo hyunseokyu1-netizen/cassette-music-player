@@ -10,6 +10,8 @@ import type { Side } from "@/hooks/useAudioPlayer";
 interface CassetteTapeProps {
   isPlaying: boolean;
   isTransitioning: boolean;
+  isFastForward?: boolean;
+  isRewind?: boolean;
   progress: number;
   side: Side;
   title: string;
@@ -22,7 +24,8 @@ const MIN_SPOOL_R = 9;
 const SPOOL_BOX = 90;
 
 export function CassetteTape({
-  isPlaying, isTransitioning, progress, side, title, tracks, width = 340,
+  isPlaying, isTransitioning, isFastForward = false, isRewind = false,
+  progress, side, title, tracks, width = 340,
 }: CassetteTapeProps) {
   const scale = width / 340;
   const H = Math.round(200 * scale);
@@ -248,8 +251,9 @@ export function CassetteTape({
           size={SPOOL_BOX * s}
           radius={leftRadius * s}
           maxRadius={MAX_SPOOL_R * s}
-          isPlaying={isPlaying || isTransitioning}
-          clockwise={side === "B"}
+          isPlaying={isPlaying || isTransitioning || isFastForward || isRewind}
+          clockwise={isRewind ? true : (side === "B")}
+          spinFast={isFastForward || isRewind}
         />
       </View>
 
@@ -266,8 +270,9 @@ export function CassetteTape({
           size={SPOOL_BOX * s}
           radius={rightRadius * s}
           maxRadius={MAX_SPOOL_R * s}
-          isPlaying={isPlaying || isTransitioning}
-          clockwise={side === "A"}
+          isPlaying={isPlaying || isTransitioning || isFastForward || isRewind}
+          clockwise={isRewind ? true : (side === "B")}
+          spinFast={isFastForward || isRewind}
         />
       </View>
     </View>

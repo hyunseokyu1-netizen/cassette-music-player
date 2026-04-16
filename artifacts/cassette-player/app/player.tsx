@@ -21,7 +21,7 @@ export default function PlayerScreen() {
   const router = useRouter();
   const {
     sideA, sideB, currentSide, currentTrack,
-    isPlaying, isLoading, isPlayingNoise, tapePosition,
+    isPlaying, isLoading, isPlayingNoise, isFastForward, isRewind, tapePosition,
     togglePlayPause,
     seekForward, startFastForward, stopFastForward, startRewind, stopRewind, flipSide,
   } = useAudioPlayerContext();
@@ -77,6 +77,8 @@ export default function PlayerScreen() {
           <CassetteTape
             isPlaying={isPlaying}
             isTransitioning={isPlayingNoise}
+            isFastForward={isFastForward}
+            isRewind={isRewind}
             progress={tapePosition / (30 * 60 * 1000)}
             side={currentSide}
             title={currentTrack?.title ?? ""}

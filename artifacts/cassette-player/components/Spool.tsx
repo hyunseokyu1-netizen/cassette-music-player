@@ -17,16 +17,19 @@ interface SpoolProps {
   maxRadius: number;
   isPlaying: boolean;
   clockwise?: boolean;
+  spinFast?: boolean;
 }
 
-export function Spool({ size, radius, maxRadius, isPlaying, clockwise = true }: SpoolProps) {
+export function Spool({ size, radius, maxRadius, isPlaying, clockwise = true, spinFast = false }: SpoolProps) {
   const rotation = useSharedValue<number>(0);
   const isPlayingShared = useSharedValue<boolean>(false);
   const radiusShared = useSharedValue<number>(radius);
   const maxRadiusShared = useSharedValue<number>(maxRadius);
   const clockwiseShared = useSharedValue<boolean>(clockwise);
+  const spinFastShared = useSharedValue<boolean>(spinFast);
 
   useEffect(() => { clockwiseShared.value = clockwise; }, [clockwise]);
+  useEffect(() => { spinFastShared.value = spinFast; }, [spinFast]);
 
   useEffect(() => {
     radiusShared.value = radius;
@@ -46,7 +49,9 @@ export function Spool({ size, radius, maxRadius, isPlaying, clockwise = true }: 
           const r = radiusShared.value;
           const mr = maxRadiusShared.value;
           const ratio = mr > 0 ? r / mr : 0.5;
-          const period = 3000 + ratio * ratio * 15000;
+          const period = spinFastShared.value
+            ? 250  // FF/REW: 빠른 회전
+            : 3000 + ratio * ratio * 15000;
           rotation.value = withTiming(
             rotation.value + (clockwiseShared.value ? 360 : -360),
             { duration: period, easing: Easing.linear },
