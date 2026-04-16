@@ -490,6 +490,8 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const play = useCallback(async () => {
     if (isPlayingNoise) return;
     if (isPlaying) return;
+    playClickSound();
+    await new Promise<void>((r) => setTimeout(r, 60));
     if (soundRef.current) {
       cancelRef.current = false;
       await soundRef.current.playAsync();
@@ -618,7 +620,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     try {
       const { sound } = await Audio.Sound.createAsync(
         require("../assets/sounds/tape-ff.wav"),
-        { shouldPlay: true, isLooping: true, volume: 0.85 }
+        { shouldPlay: true, isLooping: true, volume: 1.0 }
       );
       ffSoundRef.current = sound;
     } catch {}
@@ -643,11 +645,13 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       try { await ffSoundRef.current.stopAsync(); await ffSoundRef.current.unloadAsync(); } catch {}
       ffSoundRef.current = null;
     }
-    // 새 테이프 위치에서 재생 (이전 곡과 동일한 방식으로 트랙+오프셋 계산)
+    // 딸깍 소리 후 재생 시작 (부드러운 전환)
     const targetMs = ffTapePosRef.current;
     const items = getItems(sideRef.current);
     cancelRef.current = false;
     if (items.length === 0) { setIsPlaying(false); return; }
+    playClickSound();
+    await new Promise<void>((r) => setTimeout(r, 60));
     const { itemIdx, offsetMs } = findItemAtTapePosition(items, targetMs);
     await playItemAtRef.current?.(itemIdx, offsetMs);
   }, [getItems]);
@@ -669,7 +673,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     try {
       const { sound } = await Audio.Sound.createAsync(
         require("../assets/sounds/tape-ff.wav"),
-        { shouldPlay: true, isLooping: true, volume: 0.85 }
+        { shouldPlay: true, isLooping: true, volume: 1.0 }
       );
       rwSoundRef.current = sound;
     } catch {}
@@ -694,14 +698,30 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       try { await rwSoundRef.current.stopAsync(); await rwSoundRef.current.unloadAsync(); } catch {}
       rwSoundRef.current = null;
     }
-    // 새 테이프 위치에서 재생 (이전 곡 포함하여 올바른 트랙+오프셋으로)
+    // 딸깍 소리 후 재생 시작 (부드러운 전환)
     const targetMs = rwTapePosRef.current;
     const items = getItems(sideRef.current);
     cancelRef.current = false;
     if (items.length === 0) { setIsPlaying(false); return; }
+    playClickSound();
+    await new Promise<void>((r) => setTimeout(r, 60));
     const { itemIdx, offsetMs } = findItemAtTapePosition(items, targetMs);
     await playItemAtRef.current?.(itemIdx, offsetMs);
   }, [getItems]);
+
+  // 딸깍 소리: play 시작 / FF·REW 해제 후 재생 복귀 시 재생
+  const playClickSound = async () => {
+    try {
+      const { sound } = await Audio.Sound.createAsync(
+        require("../assets/sounds/tape-click.wav"),
+        { shouldPlay: true, volume: 1.0 }
+      );
+      // 70ms 후 자동 unload (소리 길이와 맞춤)
+      setTimeout(async () => {
+        await sound.unloadAsync().catch(() => {});
+      }, 150);
+    } catch {}
+  };
 
   const playFlipSound = async () => {
     try {
