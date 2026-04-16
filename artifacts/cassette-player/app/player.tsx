@@ -63,9 +63,9 @@ export default function PlayerScreen() {
         <View style={[styles.sidePill, { borderColor: sideColor }]}>
           <Text style={[styles.sidePillText, { color: sideColor }]}>SIDE {currentSide}</Text>
         </View>
-        <TouchableOpacity onPress={handleFlip} style={styles.btn} activeOpacity={0.7} disabled={isPlayingNoise}>
+        <TouchableOpacity onPress={handleFlip} style={styles.btn} activeOpacity={0.7} disabled={false}>
           <Icon name="refresh-cw" size={20}
-            color={isPlayingNoise ? colors.light.mutedForeground : colors.light.cassetteBeige} />
+            color={colors.light.cassetteBeige} />
         </TouchableOpacity>
       </View>
 
@@ -114,7 +114,7 @@ export default function PlayerScreen() {
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity onPress={handleFlip} style={styles.flipBtn} activeOpacity={0.8} disabled={isPlayingNoise}>
+        <TouchableOpacity onPress={handleFlip} style={styles.flipBtn} activeOpacity={0.8} disabled={false}>
           <Icon name="refresh-cw" size={13} color={colors.light.cassetteDark} />
           <Text style={styles.flipText}>FLIP TO SIDE {currentSide === "A" ? "B" : "A"}</Text>
         </TouchableOpacity>
