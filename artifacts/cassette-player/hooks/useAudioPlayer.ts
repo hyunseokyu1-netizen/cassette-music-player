@@ -208,6 +208,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const positionRef = useRef(0);
   const durationRef = useRef(0);
   const tapePositionRef = useRef(0); // 노이즈 포함 항상 최신 테이프 위치 추적
+  const tapePinRef = useRef<number | null>(null); // FF/REW 해제 후 tapePosition 고정값 (깜빡임 방지)
   const isSeekingRef = useRef(false);
   const noiseTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -406,7 +407,13 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setPosition(status.positionMillis);
     setDuration(status.durationMillis ?? 0);
     // 트랙 재생 중 테이프 위치 업데이트
+    // FF/REW 해제 직후 tapePinRef가 있으면 새 트랙이 안정될 때까지 위치 고정 (깜빡임 방지)
     const tp = computeTapePos(sideRef.current, itemIdxRef.current, status.positionMillis);
+    if (tapePinRef.current !== null) {
+      // 실제 재생 위치가 pinned 위치에 가까워지면 pin 해제
+      if (Math.abs(tp - tapePinRef.current) < 1500) tapePinRef.current = null;
+      else { setTapePosition(tapePinRef.current); return; }
+    }
     tapePositionRef.current = tp;
     setTapePosition(tp);
     // seek 중에는 isPlaying 업데이트 생략 (FF/RW 시 Play/Pause 버튼 flickering 방지)
@@ -671,6 +678,10 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     const items = getItems(sideRef.current);
     cancelRef.current = false;
     if (items.length === 0) { setIsPlaying(false); return; }
+    // 목표 위치로 즉시 고정 → 새 트랙 로드 중 깜빡임 방지
+    tapePinRef.current = targetMs;
+    tapePositionRef.current = targetMs;
+    setTapePosition(targetMs);
     playClickSound();
     await new Promise<void>((r) => setTimeout(r, 60));
     const { itemIdx, offsetMs } = findItemAtTapePosition(items, targetMs);
@@ -734,6 +745,10 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     const items = getItems(sideRef.current);
     cancelRef.current = false;
     if (items.length === 0) { setIsPlaying(false); return; }
+    // 목표 위치로 즉시 고정 → 새 트랙 로드 중 깜빡임 방지
+    tapePinRef.current = targetMs;
+    tapePositionRef.current = targetMs;
+    setTapePosition(targetMs);
     playClickSound();
     await new Promise<void>((r) => setTimeout(r, 60));
     const { itemIdx, offsetMs } = findItemAtTapePosition(items, targetMs);
