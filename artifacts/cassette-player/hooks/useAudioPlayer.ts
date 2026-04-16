@@ -208,7 +208,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const positionRef = useRef(0);
   const durationRef = useRef(0);
   const tapePositionRef = useRef(0); // 노이즈 포함 항상 최신 테이프 위치 추적
-  const tapePinRef = useRef<number | null>(null); // FF/REW 해제 후 tapePosition 고정값 (깜빡임 방지)
+  const noiseCancelRef = useRef(false); // FF/REW 시작 시 진행 중인 노이즈만 취소 (cancelRef 오염 방지)
   const isSeekingRef = useRef(false);
   const noiseTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -321,9 +321,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       let settled = false;
       const settle = (val: boolean) => { if (!settled) { settled = true; resolve(val); } };
 
-      // 외부 취소 감지 (pause 버튼 등) — 타이머 스로틀링 영향을 받아도 무관
+      // 외부 취소 감지 (pause 버튼, FF/REW 시작 등) — 타이머 스로틀링 영향을 받아도 무관
       const cancelWatcher = setInterval(() => {
-        if (cancelRef.current) { clearInterval(cancelWatcher); settle(false); }
+        if (cancelRef.current || noiseCancelRef.current) { clearInterval(cancelWatcher); settle(false); }
       }, 150);
 
       (async () => {
@@ -407,18 +407,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setPosition(status.positionMillis);
     setDuration(status.durationMillis ?? 0);
     // 트랙 재생 중 테이프 위치 업데이트
-    // FF/REW 해제 직후 tapePinRef가 있으면 새 트랙이 안정될 때까지 위치 고정 (깜빡임 방지)
     const tp = computeTapePos(sideRef.current, itemIdxRef.current, status.positionMillis);
-    if (tapePinRef.current !== null) {
-      if (Math.abs(tp - tapePinRef.current) < 1500) {
-        tapePinRef.current = null; // pin 해제, 이후 정상 업데이트
-      } else {
-        setTapePosition(tapePinRef.current); // pin 유지 (tapePosition 고정)
-        // didJustFinish는 pin과 무관하게 처리 (advance 호출 누락 방지)
-        if (status.didJustFinish && !cancelRef.current) advance();
-        return;
-      }
-    }
     tapePositionRef.current = tp;
     setTapePosition(tp);
     // seek 중에는 isPlaying 업데이트 생략 (FF/RW 시 Play/Pause 버튼 flickering 방지)
@@ -636,13 +625,13 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     if (ffActiveRef.current) return;
     ffActiveRef.current = true;
     setIsFastForward(true);
-    // 노이즈 재생 중이면 먼저 중단
-    if (cancelRef.current === false) {
-      cancelRef.current = true;
+    // 노이즈 재생 중이면 먼저 중단 (cancelRef 오염 없이 noiseCancelRef 사용)
+    if (noiseRef.current) {
+      noiseCancelRef.current = true;
       await stopNoise();
       stopNoiseTick();
       setIsPlayingNoise(false);
-      cancelRef.current = false;
+      noiseCancelRef.current = false;
     }
     // 현재 절대 테이프 위치 캡처 (노이즈 중에도 tapePositionRef 사용)
     ffTapePosRef.current = tapePositionRef.current;
@@ -683,8 +672,6 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     const items = getItems(sideRef.current);
     cancelRef.current = false;
     if (items.length === 0) { setIsPlaying(false); return; }
-    // 목표 위치로 즉시 고정 → 새 트랙 로드 중 깜빡임 방지
-    tapePinRef.current = targetMs;
     tapePositionRef.current = targetMs;
     setTapePosition(targetMs);
     playClickSound();
@@ -703,13 +690,13 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     if (rwActiveRef.current) return;
     rwActiveRef.current = true;
     setIsRewind(true);
-    // 노이즈 재생 중이면 먼저 중단
-    if (cancelRef.current === false) {
-      cancelRef.current = true;
+    // 노이즈 재생 중이면 먼저 중단 (cancelRef 오염 없이 noiseCancelRef 사용)
+    if (noiseRef.current) {
+      noiseCancelRef.current = true;
       await stopNoise();
       stopNoiseTick();
       setIsPlayingNoise(false);
-      cancelRef.current = false;
+      noiseCancelRef.current = false;
     }
     // 현재 절대 테이프 위치 캡처 (노이즈 중에도 tapePositionRef 사용)
     rwTapePosRef.current = tapePositionRef.current;
@@ -750,8 +737,6 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     const items = getItems(sideRef.current);
     cancelRef.current = false;
     if (items.length === 0) { setIsPlaying(false); return; }
-    // 목표 위치로 즉시 고정 → 새 트랙 로드 중 깜빡임 방지
-    tapePinRef.current = targetMs;
     tapePositionRef.current = targetMs;
     setTapePosition(targetMs);
     playClickSound();
