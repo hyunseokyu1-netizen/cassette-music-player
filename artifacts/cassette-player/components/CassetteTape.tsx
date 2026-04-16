@@ -252,7 +252,7 @@ export function CassetteTape({
           radius={leftRadius * s}
           maxRadius={MAX_SPOOL_R * s}
           isPlaying={isPlaying || isTransitioning || isFastForward || isRewind}
-          clockwise={isRewind ? true : (side === "B")}
+          clockwise={isFastForward ? side === "B" : isRewind ? side === "A" : side === "B"}
           spinFast={isFastForward || isRewind}
         />
       </View>
@@ -271,7 +271,7 @@ export function CassetteTape({
           radius={rightRadius * s}
           maxRadius={MAX_SPOOL_R * s}
           isPlaying={isPlaying || isTransitioning || isFastForward || isRewind}
-          clockwise={isRewind ? true : (side === "B")}
+          clockwise={isFastForward ? side === "B" : isRewind ? side === "A" : side === "B"}
           spinFast={isFastForward || isRewind}
         />
       </View>

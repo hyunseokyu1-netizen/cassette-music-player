@@ -42,15 +42,17 @@ export function Spool({ size, radius, maxRadius, isPlaying, clockwise = true, sp
   useEffect(() => {
     isPlayingShared.value = isPlaying;
     if (isPlaying) {
+      // spinFast 또는 clockwise 변경 시 기존 애니메이션 즉시 취소 후 재시작
       runOnUI(function () {
         "worklet";
+        cancelAnimation(rotation);
         function step() {
           "worklet";
           const r = radiusShared.value;
           const mr = maxRadiusShared.value;
           const ratio = mr > 0 ? r / mr : 0.5;
           const period = spinFastShared.value
-            ? 250  // FF/REW: 빠른 회전
+            ? 250
             : 3000 + ratio * ratio * 15000;
           rotation.value = withTiming(
             rotation.value + (clockwiseShared.value ? 360 : -360),
@@ -66,9 +68,12 @@ export function Spool({ size, radius, maxRadius, isPlaying, clockwise = true, sp
         step();
       })();
     } else {
-      cancelAnimation(rotation);
+      runOnUI(function () {
+        "worklet";
+        cancelAnimation(rotation);
+      })();
     }
-  }, [isPlaying]);
+  }, [isPlaying, spinFast, clockwise]);
 
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value % 360}deg` }],
