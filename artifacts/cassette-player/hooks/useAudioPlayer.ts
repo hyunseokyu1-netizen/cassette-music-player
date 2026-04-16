@@ -709,17 +709,17 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     await playItemAtRef.current?.(itemIdx, offsetMs);
   }, [getItems]);
 
-  // 딸깍 소리: play 시작 / FF·REW 해제 후 재생 복귀 시 재생
+  // 딸깍 소리: play 시작 / FF·REW 해제 후 재생 복귀 시 재생 (flip 사운드 짧게 사용)
   const playClickSound = async () => {
     try {
       const { sound } = await Audio.Sound.createAsync(
-        require("../assets/sounds/tape-click.wav"),
+        require("../assets/sounds/tape-flip.wav"),
         { shouldPlay: true, volume: 1.0 }
       );
-      // 70ms 후 자동 unload (소리 길이와 맞춤)
       setTimeout(async () => {
+        await sound.stopAsync().catch(() => {});
         await sound.unloadAsync().catch(() => {});
-      }, 150);
+      }, 200);
     } catch {}
   };
 
