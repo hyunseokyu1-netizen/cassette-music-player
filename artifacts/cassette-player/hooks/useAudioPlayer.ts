@@ -203,6 +203,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const [tapePosition, setTapePosition] = useState(0);
   const positionRef = useRef(0);
   const durationRef = useRef(0);
+  const tapePositionRef = useRef(0); // 노이즈 포함 항상 최신 테이프 위치 추적
   const isSeekingRef = useRef(false);
   const noiseTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -233,9 +234,12 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const startNoiseTick = useCallback((baseTapePos: number) => {
     if (noiseTickRef.current) clearInterval(noiseTickRef.current);
     const startedAt = Date.now();
+    tapePositionRef.current = baseTapePos;
     setTapePosition(baseTapePos);
     noiseTickRef.current = setInterval(() => {
-      setTapePosition(Math.min(baseTapePos + (Date.now() - startedAt), MAX_SIDE_MS));
+      const next = Math.min(baseTapePos + (Date.now() - startedAt), MAX_SIDE_MS);
+      tapePositionRef.current = next;
+      setTapePosition(next);
     }, 250);
   }, []);
 
@@ -397,7 +401,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setPosition(status.positionMillis);
     setDuration(status.durationMillis ?? 0);
     // 트랙 재생 중 테이프 위치 업데이트
-    setTapePosition(computeTapePos(sideRef.current, itemIdxRef.current, status.positionMillis));
+    const tp = computeTapePos(sideRef.current, itemIdxRef.current, status.positionMillis);
+    tapePositionRef.current = tp;
+    setTapePosition(tp);
     // seek 중에는 isPlaying 업데이트 생략 (FF/RW 시 Play/Pause 버튼 flickering 방지)
     if (!isSeekingRef.current) setIsPlaying(status.isPlaying);
     if (status.didJustFinish && !cancelRef.current) advance();
@@ -610,10 +616,18 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const ffTapePosRef = useRef(0); // FF 중 절대 테이프 위치 추적
 
   const startFastForward = useCallback(async () => {
-    if (ffActiveRef.current || isPlayingNoise) return;
+    if (ffActiveRef.current) return;
     ffActiveRef.current = true;
-    // 현재 절대 테이프 위치 캡처
-    ffTapePosRef.current = computeTapePos(sideRef.current, itemIdxRef.current, positionRef.current);
+    // 노이즈 재생 중이면 먼저 중단
+    if (cancelRef.current === false) {
+      cancelRef.current = true;
+      await stopNoise();
+      stopNoiseTick();
+      setIsPlayingNoise(false);
+      cancelRef.current = false;
+    }
+    // 현재 절대 테이프 위치 캡처 (노이즈 중에도 tapePositionRef 사용)
+    ffTapePosRef.current = tapePositionRef.current;
     // 오디오 일시정지
     try { await soundRef.current?.pauseAsync(); } catch {}
     // FF 사운드 루프 재생
@@ -663,10 +677,18 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const rwTapePosRef = useRef(0); // REW 중 절대 테이프 위치 추적
 
   const startRewind = useCallback(async () => {
-    if (rwActiveRef.current || isPlayingNoise) return;
+    if (rwActiveRef.current) return;
     rwActiveRef.current = true;
-    // 현재 절대 테이프 위치 캡처
-    rwTapePosRef.current = computeTapePos(sideRef.current, itemIdxRef.current, positionRef.current);
+    // 노이즈 재생 중이면 먼저 중단
+    if (cancelRef.current === false) {
+      cancelRef.current = true;
+      await stopNoise();
+      stopNoiseTick();
+      setIsPlayingNoise(false);
+      cancelRef.current = false;
+    }
+    // 현재 절대 테이프 위치 캡처 (노이즈 중에도 tapePositionRef 사용)
+    rwTapePosRef.current = tapePositionRef.current;
     // 오디오 일시정지
     try { await soundRef.current?.pauseAsync(); } catch {}
     // 테이프 되감기 사운드 루프 재생
