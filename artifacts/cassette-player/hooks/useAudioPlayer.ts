@@ -410,9 +410,14 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     // FF/REW 해제 직후 tapePinRef가 있으면 새 트랙이 안정될 때까지 위치 고정 (깜빡임 방지)
     const tp = computeTapePos(sideRef.current, itemIdxRef.current, status.positionMillis);
     if (tapePinRef.current !== null) {
-      // 실제 재생 위치가 pinned 위치에 가까워지면 pin 해제
-      if (Math.abs(tp - tapePinRef.current) < 1500) tapePinRef.current = null;
-      else { setTapePosition(tapePinRef.current); return; }
+      if (Math.abs(tp - tapePinRef.current) < 1500) {
+        tapePinRef.current = null; // pin 해제, 이후 정상 업데이트
+      } else {
+        setTapePosition(tapePinRef.current); // pin 유지 (tapePosition 고정)
+        // didJustFinish는 pin과 무관하게 처리 (advance 호출 누락 방지)
+        if (status.didJustFinish && !cancelRef.current) advance();
+        return;
+      }
     }
     tapePositionRef.current = tp;
     setTapePosition(tp);
