@@ -12,7 +12,16 @@ Cassette Tape Music Player brings the nostalgic feel of analog cassette tapes to
 
 ## Screenshots
 
-> *(Coming soon)*
+<p align="center">
+  <img src="./screenshots/player-side-a.png" width="28%" alt="Player - Side A" />
+  &nbsp;&nbsp;
+  <img src="./screenshots/library.png" width="28%" alt="Library" />
+  &nbsp;&nbsp;
+  <img src="./screenshots/player-side-b.png" width="28%" alt="Player - Side B (Playing)" />
+</p>
+<p align="center">
+  <em>Player (Side A) &nbsp;·&nbsp; Library &nbsp;·&nbsp; Player (Side B, Playing)</em>
+</p>
 
 ## Features
 

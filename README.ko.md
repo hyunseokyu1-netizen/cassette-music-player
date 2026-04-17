@@ -12,7 +12,16 @@
 
 ## 스크린샷
 
-> *(준비 중)*
+<p align="center">
+  <img src="./screenshots/player-side-a.png" width="28%" alt="플레이어 - Side A" />
+  &nbsp;&nbsp;
+  <img src="./screenshots/library.png" width="28%" alt="라이브러리" />
+  &nbsp;&nbsp;
+  <img src="./screenshots/player-side-b.png" width="28%" alt="플레이어 - Side B (재생 중)" />
+</p>
+<p align="center">
+  <em>플레이어 (Side A) &nbsp;·&nbsp; 라이브러리 &nbsp;·&nbsp; 플레이어 (Side B, 재생 중)</em>
+</p>
 
 ## 주요 기능
 
