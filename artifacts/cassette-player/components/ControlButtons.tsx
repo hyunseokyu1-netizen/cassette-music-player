@@ -1,7 +1,9 @@
-import React, { useRef, useCallback } from "react";
+import React, { useCallback } from "react";
 import { View, Text, StyleSheet, Pressable, ActivityIndicator } from "react-native";
 import * as Haptics from "expo-haptics";
 import colors from "@/constants/colors";
+import { hasRetroControlAssets, retroPlayerAssets, type SpriteCrop } from "@/constants/retroPlayerAssets";
+import { SpriteView } from "./SpriteView";
 
 interface ControlButtonsProps {
   isPlaying: boolean;
@@ -85,7 +87,6 @@ export function ControlButtons({
   isPlaying, isLoading, hasTracks,
   onPlayPause, onFFStart, onFFStop, onRWStart, onRWStop,
 }: ControlButtonsProps) {
-
   const handleFFStart = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onFFStart();
@@ -103,6 +104,21 @@ export function ControlButtons({
   const handleRWStop = useCallback(() => {
     onRWStop();
   }, [onRWStop]);
+
+  if (hasRetroControlAssets()) {
+    return (
+      <RetroImageControlButtons
+        isPlaying={isPlaying}
+        isLoading={isLoading}
+        hasTracks={hasTracks}
+        onPlayPause={onPlayPause}
+        onFFStart={handleFFStart}
+        onFFStop={handleFFStop}
+        onRWStart={handleRWStart}
+        onRWStop={handleRWStop}
+      />
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -141,6 +157,91 @@ export function ControlButtons({
   );
 }
 
+function RetroImageControlButtons({
+  isPlaying,
+  isLoading,
+  hasTracks,
+  onPlayPause,
+  onFFStart,
+  onFFStop,
+  onRWStart,
+  onRWStop,
+}: ControlButtonsProps) {
+  const { sources } = retroPlayerAssets;
+
+  return (
+    <View style={styles.retroContainer}>
+      <View style={styles.retroRow}>
+        <RetroImageButton
+          label="REWIND"
+          crop={sources.rewindButton}
+          disabled={!hasTracks}
+          onPressIn={onRWStart}
+          onPressOut={onRWStop}
+        />
+        <RetroImageButton
+          label={isPlaying ? "PLAYING" : "PLAY"}
+          crop={isPlaying ? sources.playButtonActive : sources.playButton}
+          disabled={!hasTracks}
+          loading={isLoading}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            onPlayPause();
+          }}
+        />
+        <RetroImageButton
+          label="FAST FORWARD"
+          crop={sources.fastForwardButton}
+          disabled={!hasTracks}
+          onPressIn={onFFStart}
+          onPressOut={onFFStop}
+        />
+      </View>
+    </View>
+  );
+}
+
+function RetroImageButton({
+  label,
+  crop,
+  onPress,
+  onPressIn,
+  onPressOut,
+  disabled,
+  loading,
+}: {
+  label: string;
+  crop?: SpriteCrop;
+  onPress?: () => void;
+  onPressIn?: () => void;
+  onPressOut?: () => void;
+  disabled?: boolean;
+  loading?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.retroButtonWrap,
+        disabled && styles.retroButtonDisabled,
+        pressed && styles.retroButtonPressed,
+      ]}
+    >
+      {loading ? (
+        <View style={styles.retroLoading}>
+          <ActivityIndicator size="small" color={colors.light.cassetteBeige} />
+        </View>
+      ) : crop ? (
+        <SpriteView crop={crop} width={96} />
+      ) : null}
+      <Text style={styles.retroButtonLabel}>{label}</Text>
+    </Pressable>
+  );
+}
+
 const BTN_BG = "#3a2510";
 const BTN_TOP = "#5c3820";
 const BTN_BOTTOM = "#1a0e06";
@@ -151,6 +252,45 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     paddingHorizontal: 24,
+  },
+  retroContainer: {
+    paddingHorizontal: 16,
+  },
+  retroRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "flex-end",
+    gap: 16,
+  },
+  retroButtonWrap: {
+    width: 118,
+    alignItems: "center",
+    gap: 8,
+  },
+  retroButtonPressed: {
+    transform: [{ translateY: 2 }],
+  },
+  retroButtonDisabled: {
+    opacity: 0.38,
+  },
+  retroButtonImage: {
+    width: 96,
+    height: 96,
+  },
+  retroButtonLabel: {
+    color: colors.light.cassetteBeige,
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1.2,
+    textAlign: "center",
+  },
+  retroLoading: {
+    width: 96,
+    height: 96,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 18,
+    backgroundColor: colors.light.card,
   },
   panel: {
     backgroundColor: colors.light.card,

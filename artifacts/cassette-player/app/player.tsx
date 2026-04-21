@@ -15,6 +15,7 @@ import { Icon } from "@/components/Icon";
 import { useAudioPlayerContext } from "@/contexts/AudioPlayerContext";
 import { TrackItem } from "@/hooks/useAudioPlayer";
 import colors from "@/constants/colors";
+import { hasRetroCassetteAssets, hasRetroControlAssets } from "@/constants/retroPlayerAssets";
 
 export default function PlayerScreen() {
   const insets = useSafeAreaInsets();
@@ -56,6 +57,7 @@ export default function PlayerScreen() {
   const hasTracks = activeTracks.length > 0;
   const trackTitles = activeTracks.map((t) => t.title);
   const sideColor = currentSide === "A" ? "#c0524a" : "#4a80c0";
+  const usesRetroImages = hasRetroCassetteAssets() || hasRetroControlAssets();
 
   return (
     <View style={[styles.container, { paddingTop: topPad, paddingBottom: bottomPad }]}>
@@ -72,7 +74,7 @@ export default function PlayerScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.cassetteWrapper}>
+      <View style={[styles.cassetteWrapper, usesRetroImages && styles.cassetteWrapperRetro]}>
         <Animated.View style={animStyle}>
           <CassetteTape
             isPlaying={isPlaying}
@@ -88,7 +90,7 @@ export default function PlayerScreen() {
         </Animated.View>
       </View>
 
-      <View style={styles.trackInfo}>
+      <View style={[styles.trackInfo, usesRetroImages && styles.trackInfoRetro]}>
         <Text style={styles.trackTitle} numberOfLines={2}>
           {currentTrack?.title ?? (isPlayingNoise ? lastTrackTitleRef.current : (hasTracks ? "Tap PLAY to start" : "Open library to add tracks"))}
         </Text>
@@ -105,7 +107,7 @@ export default function PlayerScreen() {
 
       <ProgressBar tapePosition={tapePosition} />
 
-      <View style={styles.controls}>
+      <View style={[styles.controls, usesRetroImages && styles.controlsRetro]}>
         <ControlButtons
           isPlaying={isPlaying}
           isLoading={isLoading}
@@ -138,9 +140,13 @@ const styles = StyleSheet.create({
   sidePill: { borderWidth: 1.5, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 4 },
   sidePillText: { fontSize: 11, fontFamily: "Inter_700Bold", letterSpacing: 2 },
   cassetteWrapper: { alignItems: "center", paddingVertical: 10, paddingHorizontal: 18 },
+  cassetteWrapperRetro: { paddingTop: 18, paddingBottom: 18 },
   trackInfo: {
     paddingHorizontal: 28, alignItems: "center", gap: 6,
     marginBottom: 12, minHeight: 52, justifyContent: "center",
+  },
+  trackInfoRetro: {
+    marginBottom: 18,
   },
   trackTitle: {
     color: colors.light.cassetteCream, fontSize: 17,
@@ -150,6 +156,7 @@ sideRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   sideCount: { fontSize: 11, fontFamily: "Inter_500Medium", color: colors.light.mutedForeground, letterSpacing: 0.5 },
   sideDot: { color: colors.light.mutedForeground, fontSize: 12 },
   controls: { marginTop: 12, marginBottom: 14 },
+  controlsRetro: { marginTop: 24, marginBottom: 22 },
   footer: { alignItems: "center" },
   flipBtn: {
     flexDirection: "row", alignItems: "center", gap: 7,

@@ -5,7 +5,9 @@ import Svg, {
   LinearGradient, RadialGradient, Stop, G, Ellipse,
 } from "react-native-svg";
 import { Spool } from "./Spool";
+import { SpriteView } from "./SpriteView";
 import type { Side } from "@/hooks/useAudioPlayer";
+import { hasRetroCassetteAssets, retroPlayerAssets } from "@/constants/retroPlayerAssets";
 
 interface CassetteTapeProps {
   isPlaying: boolean;
@@ -27,6 +29,22 @@ export function CassetteTape({
   isPlaying, isTransitioning, isFastForward = false, isRewind = false,
   progress, side, title, tracks, width = 340,
 }: CassetteTapeProps) {
+  if (hasRetroCassetteAssets()) {
+    return (
+      <ImageCassetteTape
+        isPlaying={isPlaying}
+        isTransitioning={isTransitioning}
+        isFastForward={isFastForward}
+        isRewind={isRewind}
+        progress={progress}
+        side={side}
+        title={title}
+        tracks={tracks}
+        width={width}
+      />
+    );
+  }
+
   const scale = width / 340;
   const H = Math.round(200 * scale);
   const W = width;
@@ -279,7 +297,121 @@ export function CassetteTape({
   );
 }
 
+function ImageCassetteTape({
+  isPlaying,
+  isTransitioning,
+  isFastForward = false,
+  isRewind = false,
+  progress,
+  side,
+  title,
+  tracks,
+  width = 340,
+}: CassetteTapeProps) {
+  const { layout, sources } = retroPlayerAssets;
+  const height = width / layout.cassetteAspectRatio;
+  const status = isTransitioning ? "LOADING" : isPlaying ? "PLAYING" : "STOPPED";
+  const leftReelSize = width * layout.leftReel.size;
+  const rightReelSize = width * layout.rightReel.size;
+  const leftReelX = width * layout.leftReel.x - leftReelSize / 2;
+  const leftReelY = height * layout.leftReel.y - leftReelSize / 2;
+  const rightReelX = width * layout.rightReel.x - rightReelSize / 2;
+  const rightReelY = height * layout.rightReel.y - rightReelSize / 2;
+  const labelStyle = {
+    left: width * layout.labelArea.x,
+    top: height * layout.labelArea.y,
+    width: width * layout.labelArea.width,
+    height: height * layout.labelArea.height,
+  };
+
+  return (
+    <View style={{ width, height }}>
+      {sources.cassetteBody && (
+        <SpriteView crop={sources.cassetteBody} width={width} height={height} />
+      )}
+
+      <View style={[styles.reelLayer, { left: leftReelX, top: leftReelY, width: leftReelSize, height: leftReelSize }]}>
+        <Spool
+          size={leftReelSize}
+          radius={leftReelSize / 2}
+          maxRadius={leftReelSize / 2}
+          isPlaying={isPlaying || isTransitioning || isFastForward || isRewind}
+          clockwise={isRewind}
+          spinFast={isFastForward || isRewind}
+          spriteCrop={sources.leftReel}
+        />
+      </View>
+
+      <View style={[styles.reelLayer, { left: rightReelX, top: rightReelY, width: rightReelSize, height: rightReelSize }]}>
+        <Spool
+          size={rightReelSize}
+          radius={rightReelSize / 2}
+          maxRadius={rightReelSize / 2}
+          isPlaying={isPlaying || isTransitioning || isFastForward || isRewind}
+          clockwise={isRewind}
+          spinFast={isFastForward || isRewind}
+          spriteCrop={sources.rightReel}
+        />
+      </View>
+
+      <View style={[styles.labelOverlay, labelStyle]}>
+        <Text style={styles.imageCassetteSide}>SIDE {side}</Text>
+        <Text style={styles.imageCassetteStatus}>{status}</Text>
+        <Text numberOfLines={1} style={styles.imageCassetteTitle}>
+          {title || "Cassette mix"}
+        </Text>
+        <Text numberOfLines={2} style={styles.imageCassetteTracks}>
+          {(tracks.length ? tracks.slice(0, 4) : ["No tracks"]).join("  •  ")}
+        </Text>
+      </View>
+
+      <View style={[styles.windowShadow, { opacity: 0.08 + progress * 0.18 }]} pointerEvents="none" />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  reelLayer: {
+    position: "absolute",
+  },
+  labelOverlay: {
+    position: "absolute",
+    justifyContent: "flex-start",
+    gap: 2,
+  },
+  imageCassetteSide: {
+    color: "#2a241d",
+    fontFamily: "Inter_700Bold",
+    fontSize: 9,
+    letterSpacing: 1.2,
+  },
+  imageCassetteStatus: {
+    color: "rgba(42,36,29,0.7)",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 8,
+    letterSpacing: 1,
+  },
+  imageCassetteTitle: {
+    color: "#211b16",
+    fontFamily: "Inter_700Bold",
+    fontSize: 10,
+    letterSpacing: 0.3,
+  },
+  imageCassetteTracks: {
+    color: "rgba(42,36,29,0.72)",
+    fontFamily: "Inter_500Medium",
+    fontSize: 8,
+    lineHeight: 10,
+  },
+  windowShadow: {
+    position: "absolute",
+    left: "38%",
+    top: "34%",
+    width: "24%",
+    height: "14%",
+    borderRadius: 8,
+    backgroundColor: "#000",
+  },
   sideLabel: {
     fontFamily: "Inter_700Bold",
     letterSpacing: 1.5,

@@ -7,9 +7,11 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
-import { View } from "react-native";
+import { View, StyleSheet } from "react-native";
 import Svg, { Circle, Line, G, Defs, RadialGradient, Stop } from "react-native-svg";
 import colors from "@/constants/colors";
+import type { SpriteCrop } from "@/constants/retroPlayerAssets";
+import { SpriteView } from "./SpriteView";
 
 interface SpoolProps {
   size: number;
@@ -18,9 +20,18 @@ interface SpoolProps {
   isPlaying: boolean;
   clockwise?: boolean;
   spinFast?: boolean;
+  spriteCrop?: SpriteCrop;
 }
 
-export function Spool({ size, radius, maxRadius, isPlaying, clockwise = true, spinFast = false }: SpoolProps) {
+export function Spool({
+  size,
+  radius,
+  maxRadius,
+  isPlaying,
+  clockwise = true,
+  spinFast = false,
+  spriteCrop,
+}: SpoolProps) {
   const rotation = useSharedValue<number>(0);
   const isPlayingShared = useSharedValue<boolean>(false);
   const radiusShared = useSharedValue<number>(radius);
@@ -96,56 +107,65 @@ export function Spool({ size, radius, maxRadius, isPlaying, clockwise = true, sp
 
   return (
     <View style={{ width: size, height: size }}>
-      <Svg width={size} height={size} style={{ position: "absolute" }}>
-        <Defs>
-          <RadialGradient id={`rg${Math.round(radius)}`} cx="40%" cy="35%" r="65%">
-            <Stop offset="0%" stopColor="#5c3820" />
-            <Stop offset="100%" stopColor="#1a0d05" />
-          </RadialGradient>
-        </Defs>
-        <Circle
-          cx={cx} cy={cy} r={radius}
-          fill={`url(#rg${Math.round(radius)})`}
-          stroke="#3d2010"
-          strokeWidth={1.5}
-        />
-        <Circle
-          cx={cx} cy={cy} r={radius * 0.58}
-          fill="#120a03"
-          stroke="#2e1808"
-          strokeWidth={1}
-        />
-      </Svg>
-
-      <Animated.View style={[{ position: "absolute", width: size, height: size }, animStyle]}>
-        <Svg width={size} height={size}>
-          {spokes.map((s, i) => (
-            <Line
-              key={i}
-              x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
-              stroke="#6b3e1e"
-              strokeWidth={2.5}
-              strokeLinecap="round"
+      {spriteCrop ? (
+        <Animated.View style={[styles.imageLayer, { width: size, height: size }, animStyle]}>
+          <SpriteView crop={spriteCrop} width={size} height={size} />
+        </Animated.View>
+      ) : (
+        <>
+          <Svg width={size} height={size} style={{ position: "absolute" }}>
+            <Defs>
+              <RadialGradient id={`rg${Math.round(radius)}`} cx="40%" cy="35%" r="65%">
+                <Stop offset="0%" stopColor="#5c3820" />
+                <Stop offset="100%" stopColor="#1a0d05" />
+              </RadialGradient>
+            </Defs>
+            <Circle
+              cx={cx} cy={cy} r={radius}
+              fill={`url(#rg${Math.round(radius)})`}
+              stroke="#3d2010"
+              strokeWidth={1.5}
             />
-          ))}
-          <Circle cx={cx} cy={cy} r={hubR} fill="#6b3e1e" stroke="#8b5a2b" strokeWidth={1} />
-          <Circle cx={cx} cy={cy} r={hubR * 0.45} fill="#1a0d05" />
-        </Svg>
-      </Animated.View>
+            <Circle
+              cx={cx} cy={cy} r={radius * 0.58}
+              fill="#120a03"
+              stroke="#2e1808"
+              strokeWidth={1}
+            />
+          </Svg>
 
-      <Svg
-        width={size}
-        height={size}
-        style={{ position: "absolute" }}
-        pointerEvents="none"
-      >
-        <Circle
-          cx={cx} cy={cy} r={radius * 0.57}
-          fill="none"
-          stroke="rgba(255,200,120,0.04)"
-          strokeWidth={radius * 0.1}
-        />
-      </Svg>
+          <Animated.View style={[{ position: "absolute", width: size, height: size }, animStyle]}>
+            <Svg width={size} height={size}>
+              {spokes.map((s, i) => (
+                <Line
+                  key={i}
+                  x1={s.x1} y1={s.y1} x2={s.x2} y2={s.y2}
+                  stroke="#6b3e1e"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                />
+              ))}
+              <Circle cx={cx} cy={cy} r={hubR} fill="#6b3e1e" stroke="#8b5a2b" strokeWidth={1} />
+              <Circle cx={cx} cy={cy} r={hubR * 0.45} fill="#1a0d05" />
+            </Svg>
+          </Animated.View>
+
+          <Svg width={size} height={size} style={{ position: "absolute" }} pointerEvents="none">
+            <Circle
+              cx={cx} cy={cy} r={radius * 0.57}
+              fill="none"
+              stroke="rgba(255,200,120,0.04)"
+              strokeWidth={radius * 0.1}
+            />
+          </Svg>
+        </>
+      )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  imageLayer: {
+    position: "absolute",
+  },
+});
