@@ -5,7 +5,7 @@ type IconName =
   | "skip-back" | "skip-forward" | "rewind" | "fast-forward"
   | "play" | "pause" | "arrow-left" | "list" | "refresh-cw"
   | "plus" | "x" | "volume-2" | "music" | "folder" | "folder-open"
-  | "trash-2" | "search" | "info" | "check";
+  | "trash-2" | "search" | "info" | "check" | "link" | "youtube";
 
 interface IconProps {
   name: IconName;
@@ -147,6 +147,20 @@ export function Icon({ name, size = 24, color = "#fff", strokeWidth = 2 }: IconP
         return (
           <G {...props}>
             <Path d="M20 6L9 17l-5-5" />
+          </G>
+        );
+      case "link":
+        return (
+          <G {...props}>
+            <Path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+            <Path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+          </G>
+        );
+      case "youtube":
+        return (
+          <G {...props}>
+            <Path d="M22.54 6.42a2.78 2.78 0 00-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46A2.78 2.78 0 001.46 6.42 29 29 0 001 12a29 29 0 00.46 5.58 2.78 2.78 0 001.95 1.96C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 001.95-1.96A29 29 0 0023 12a29 29 0 00-.46-5.58z" strokeWidth={sw} />
+            <Path d="M9.75 15.02l5.75-3.02-5.75-3.02v6.04z" fill={color} stroke={color} strokeWidth={sw * 0.5} />
           </G>
         );
       default:

@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Audio, AVPlaybackStatus } from "expo-av";
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Notifications from "expo-notifications";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, AppState, Platform } from "react-native";
@@ -78,12 +78,16 @@ async function dismissPlaybackNotification() {
 
 export type Side = "A" | "B";
 
+export type TrackSourceType = "local" | "stream" | "youtube";
+
 export interface TrackItem {
   id: string;
   type: "track";
   title: string;
   duration: number;
   uri: string;
+  sourceType?: TrackSourceType;
+  youtubeId?: string;
 }
 
 export interface NoiseItem {
@@ -186,9 +190,35 @@ export interface UseAudioPlayerReturn {
   stopRewind: () => Promise<void>;
   flipSide: (tapePositionMs?: number) => Promise<void>;
   addToSide: (side: Side) => Promise<void>;
+  addUrlToSide: (url: string, side: Side, customTitle?: string) => Promise<void>;
   removeTrackItem: (side: Side, trackId: string) => void;
   updateNoiseDuration: (side: Side, noiseId: string, ms: number) => void;
   setSide: (side: Side) => void;
+  currentYoutubeId: string | null;
+  youtubePlaying: boolean;
+  onYoutubeStateChange: (state: string) => void;
+}
+
+// YouTube URL에서 videoId 추출
+function extractYouTubeId(url: string): string | null {
+  const match = url.match(
+    /(?:youtube\.com\/(?:watch\?.*v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+  );
+  return match?.[1] ?? null;
+}
+
+// YouTube oEmbed API로 제목 조회 (API key 불필요)
+async function fetchYouTubeTitle(videoId: string): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+    );
+    if (res.ok) {
+      const data = await res.json();
+      return typeof data.title === "string" ? data.title : null;
+    }
+  } catch {}
+  return null;
 }
 
 export function useAudioPlayer(): UseAudioPlayerReturn {
@@ -205,12 +235,15 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const [position, setPosition] = useState(0);
   const [duration, setDuration] = useState(0);
   const [tapePosition, setTapePosition] = useState(0);
+  const [currentYoutubeId, setCurrentYoutubeId] = useState<string | null>(null);
+  const [youtubePlaying, setYoutubePlaying] = useState(false);
   const positionRef = useRef(0);
   const durationRef = useRef(0);
   const tapePositionRef = useRef(0); // 노이즈 포함 항상 최신 테이프 위치 추적
   const noiseCancelRef = useRef(false); // FF/REW 시작 시 진행 중인 노이즈만 취소 (cancelRef 오염 방지)
   const isSeekingRef = useRef(false);
   const noiseTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const youtubeTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const soundRef = useRef<Audio.Sound | null>(null);
   const noiseRef = useRef<Audio.Sound | null>(null);
@@ -250,6 +283,26 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   const stopNoiseTick = useCallback(() => {
     if (noiseTickRef.current) { clearInterval(noiseTickRef.current); noiseTickRef.current = null; }
+  }, []);
+
+  // YouTube 재생 중 테이프 위치 실시간 업데이트
+  const startYoutubeTick = useCallback((baseTapePos: number) => {
+    if (youtubeTickRef.current) clearInterval(youtubeTickRef.current);
+    const startedAt = Date.now();
+    tapePositionRef.current = baseTapePos;
+    setTapePosition(baseTapePos);
+    youtubeTickRef.current = setInterval(() => {
+      if (cancelRef.current) return;
+      const elapsed = Date.now() - startedAt;
+      const next = Math.min(baseTapePos + elapsed, MAX_SIDE_MS);
+      tapePositionRef.current = next;
+      setTapePosition(next);
+      setPosition(elapsed);
+    }, 250);
+  }, []);
+
+  const stopYoutubeTick = useCallback(() => {
+    if (youtubeTickRef.current) { clearInterval(youtubeTickRef.current); youtubeTickRef.current = null; }
   }, []);
 
   const saveItems = useCallback((side: Side, items: SideItem[]) => {
@@ -298,13 +351,16 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   const cancelAll = useCallback(async () => {
     cancelRef.current = true;
+    stopYoutubeTick();
+    setCurrentYoutubeId(null);
+    setYoutubePlaying(false);
     await Promise.all([stopTrack(), stopNoise()]);
     setIsPlaying(false);
     setIsPlayingNoise(false);
     setPosition(0);
     setDuration(0);
     dismissPlaybackNotification();
-  }, []);
+  }, [stopYoutubeTick]);
 
   // tape-noise.wav 길이 (7.92s). seekMs = NOISE_FILE_MS - durationMs 위치에서
   // 시작하면 durationMs 후 didJustFinish가 자연 발생 → setTimeout 불필요
@@ -436,17 +492,34 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       stopNoiseTick();
       setIsPlayingNoise(false);
       if (done) advance();
+    } else if (item.sourceType === "youtube" && item.youtubeId) {
+      // YouTube 트랙: expo-av 대신 YouTube iframe으로 재생
+      setIsPlayingNoise(false);
+      setIsLoading(false);
+      setPosition(0);
+      setDuration(item.duration || 0);
+      await stopTrack();
+      if (cancelRef.current) return;
+      setCurrentYoutubeId(item.youtubeId);
+      setYoutubePlaying(true);
+      setIsPlaying(true);
+      const baseTapePos = computeTapePos(sideRef.current, idx, initialPositionMs ?? 0);
+      startYoutubeTick(baseTapePos);
+      showPlaybackNotification(item.title);
     } else {
       setIsPlayingNoise(false);
       setIsLoading(true);
       setPosition(0);
       setDuration(0);
+      // YouTube 트랙에서 일반 트랙으로 전환 시 정리
+      stopYoutubeTick();
+      setCurrentYoutubeId(null);
+      setYoutubePlaying(false);
       try {
         await stopTrack();
         if (cancelRef.current) return;
         const startPos = initialPositionMs ?? 0;
         // shouldPlay:true + positionMillis 로 원자적 seek-and-play
-        // (play 시작 후 위치 확인하여 seek이 안 됐으면 보정)
         const { sound } = await Audio.Sound.createAsync(
           { uri: item.uri },
           { shouldPlay: true, positionMillis: startPos },
@@ -475,7 +548,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       }
       setIsLoading(false);
     }
-  }, [getItems, advance, onPlaybackStatusUpdate, computeTapePos, startNoiseTick, stopNoiseTick]);
+  }, [getItems, advance, onPlaybackStatusUpdate, computeTapePos, startNoiseTick, stopNoiseTick, startYoutubeTick, stopYoutubeTick]);
 
   useEffect(() => { playItemAtRef.current = playItemAt; }, [playItemAt]);
 
@@ -502,6 +575,14 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const play = useCallback(async () => {
     if (isPlayingNoise) return;
     if (isPlaying) return;
+    // YouTube 트랙 재개
+    if (currentYoutubeId) {
+      cancelRef.current = false;
+      setYoutubePlaying(true);
+      setIsPlaying(true);
+      startYoutubeTick(tapePositionRef.current);
+      return;
+    }
     playClickSound();
     await new Promise<void>((r) => setTimeout(r, 60));
     if (soundRef.current) {
@@ -514,9 +595,17 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       cancelRef.current = false;
       await playItemAtRef.current?.(0);
     }
-  }, [isPlaying, isPlayingNoise, getItems]);
+  }, [isPlaying, isPlayingNoise, currentYoutubeId, getItems, startYoutubeTick]);
 
   const pause = useCallback(async () => {
+    // YouTube 트랙 일시정지
+    if (currentYoutubeId) {
+      stopYoutubeTick();
+      setYoutubePlaying(false);
+      setIsPlaying(false);
+      dismissPlaybackNotification();
+      return;
+    }
     if (isPlayingNoise) {
       cancelRef.current = true;
       await stopNoise();
@@ -533,7 +622,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     const cur = items[itemIdxRef.current];
     const title = cur?.type === "track" ? cur.title : "";
     updatePlaybackNotification(title, false);
-  }, [isPlaying, isPlayingNoise, getItems]);
+  }, [isPlaying, isPlayingNoise, currentYoutubeId, getItems, stopYoutubeTick]);
 
   const stopPlayback = useCallback(async () => {
     await cancelAll();
@@ -919,6 +1008,101 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setIsAdding(false);
   }, [getItems, saveItems]);
 
+  // YouTube iframe에서 상태 변경 이벤트 수신 (player.tsx에서 호출)
+  const onYoutubeStateChange = useCallback((state: string) => {
+    if (state === "ended") {
+      stopYoutubeTick();
+      setCurrentYoutubeId(null);
+      setYoutubePlaying(false);
+      setIsPlaying(false);
+      if (!cancelRef.current) advance();
+    } else if (state === "playing") {
+      setIsPlaying(true);
+      setYoutubePlaying(true);
+    } else if (state === "paused") {
+      setYoutubePlaying(false);
+      setIsPlaying(false);
+    }
+  }, [advance, stopYoutubeTick]);
+
+  // URL(YouTube/스트림) 트랙을 Side에 추가
+  const addUrlToSide = useCallback(async (url: string, side: Side, customTitle?: string) => {
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) return;
+
+    const existing = getItems(side);
+    const usedMs = totalMs(existing);
+
+    setIsAdding(true);
+    try {
+      let track: TrackItem;
+      const youtubeId = extractYouTubeId(trimmedUrl);
+
+      if (youtubeId) {
+        const fetchedTitle = await fetchYouTubeTitle(youtubeId);
+        const title = customTitle || fetchedTitle || `YouTube`;
+        track = {
+          id: trackId(youtubeId),
+          type: "track" as const,
+          title,
+          duration: 0, // YouTube는 재생 전까지 시간 미확인
+          uri: trimmedUrl,
+          sourceType: "youtube",
+          youtubeId,
+        };
+      } else {
+        // 직접 스트림 URL
+        const rawName = trimmedUrl.split("/").pop()?.split("?")[0] ?? "stream";
+        const title = customTitle || rawName.replace(/\.[^/.]+$/, "");
+        const duration = await loadFileDuration(trimmedUrl);
+        if (duration === 0) {
+          Alert.alert(
+            "Cannot Load",
+            "Failed to load audio from this URL. Make sure it is a direct audio link (mp3, m4a, etc.)."
+          );
+          return;
+        }
+        const addMs = duration + DEFAULT_NOISE_MS + (existing.length === 0 ? DEFAULT_NOISE_MS : 0);
+        if (usedMs + addMs > MAX_SIDE_MS) {
+          Alert.alert(
+            "Time Limit Reached",
+            `Adding this track would exceed the 30-minute limit for Side ${side}.`
+          );
+          return;
+        }
+        track = {
+          id: trackId(trimmedUrl),
+          type: "track" as const,
+          title,
+          duration,
+          uri: trimmedUrl,
+          sourceType: "stream",
+        };
+      }
+
+      if (existing.find((it) => it.id === track.id)) {
+        Alert.alert("Already Added", "This URL is already in the playlist.");
+        return;
+      }
+
+      let items = [...existing];
+      const isEmpty = items.length === 0;
+      if (isEmpty) {
+        items.push({ id: genId("n"), type: "noise", duration: DEFAULT_NOISE_MS });
+        items.push(track);
+        items.push({ id: genId("n"), type: "noise", duration: DEFAULT_NOISE_MS });
+      } else {
+        items.push(track);
+        items.push({ id: genId("n"), type: "noise", duration: DEFAULT_NOISE_MS });
+      }
+      saveItems(side, items);
+    } catch (err) {
+      console.warn("addUrlToSide error:", err);
+      Alert.alert("Error", "Could not add the URL. Please check and try again.");
+    }
+    setIsAdding(false);
+  }, [getItems, saveItems]);
+
   const removeTrackItem = useCallback((side: Side, tId: string) => {
     const items = getItems(side);
     const idx = items.findIndex((it) => it.id === tId);
@@ -964,6 +1148,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     togglePlayPause, play, pause, stopPlayback,
     playNext, playPrevious, playItemAt,
     seekTo, seekForward, seekBackward, startFastForward, stopFastForward, startRewind, stopRewind,
-    flipSide, addToSide, removeTrackItem, updateNoiseDuration, setSide,
+    flipSide, addToSide, addUrlToSide, removeTrackItem, updateNoiseDuration, setSide,
+    currentYoutubeId, youtubePlaying, onYoutubeStateChange,
   };
 }
