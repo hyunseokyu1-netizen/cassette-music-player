@@ -26,7 +26,7 @@
         "android.permission.WAKE_LOCK",
         "android.permission.RECEIVE_BOOT_COMPLETED"
       ],
-      "package": "com.anonymous.cassetteplayer",
+      "package": "com.hscassette.player",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#f5e6c8"
