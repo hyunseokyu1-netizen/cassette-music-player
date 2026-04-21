@@ -1,0 +1,137 @@
+<svg width="720" height="1480" viewBox="0 0 720 1480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="phoneBody" x1="88" y1="28" x2="632" y2="1452" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c8c0b0"/>
+      <stop offset="0.35" stop-color="#8d867d"/>
+      <stop offset="1" stop-color="#59534c"/>
+    </linearGradient>
+    <linearGradient id="screenFrame" x1="116" y1="138" x2="604" y2="1296" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4c4945"/>
+      <stop offset="1" stop-color="#1b1a19"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="172" y1="222" x2="556" y2="772" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f2ead7"/>
+      <stop offset="0.6" stop-color="#e6dbc6"/>
+      <stop offset="1" stop-color="#d7c7ac"/>
+    </linearGradient>
+    <linearGradient id="orangeBand" x1="170" y1="398" x2="552" y2="398" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c96f32"/>
+      <stop offset="0.55" stop-color="#d9874a"/>
+      <stop offset="1" stop-color="#bd642f"/>
+    </linearGradient>
+    <linearGradient id="windowGloss" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.26"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="buttonFace" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#bdb2a0"/>
+      <stop offset="0.55" stop-color="#938770"/>
+      <stop offset="1" stop-color="#695f52"/>
+    </linearGradient>
+    <radialGradient id="playGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(360 1190) rotate(90) scale(116 116)">
+      <stop offset="0" stop-color="#ffd88a"/>
+      <stop offset="0.45" stop-color="#ffb752" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#ff9b2d" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="ledGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(286 1048) rotate(90) scale(28 28)">
+      <stop offset="0" stop-color="#cfff8b"/>
+      <stop offset="1" stop-color="#75c938" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="paperNoise" x="-20%" y="-20%" width="140%" height="140%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="noise"/>
+      <feColorMatrix in="noise" type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.08"/>
+      </feComponentTransfer>
+    </filter>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000000" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <rect width="720" height="1480" fill="#171514"/>
+  <rect x="88" y="28" width="544" height="1424" rx="64" fill="url(#phoneBody)"/>
+  <rect x="102" y="44" width="516" height="1390" rx="50" fill="#1f1d1a"/>
+  <rect x="116" y="138" width="488" height="1158" rx="22" fill="url(#screenFrame)"/>
+  <rect x="292" y="62" width="136" height="30" rx="15" fill="#111"/>
+
+  <g filter="url(#shadow)">
+    <rect x="140" y="180" width="440" height="900" rx="18" fill="#24211e"/>
+    <rect x="156" y="196" width="408" height="620" rx="12" fill="#3b352f"/>
+    <rect x="170" y="210" width="380" height="590" rx="10" fill="url(#paper)"/>
+    <rect x="170" y="356" width="380" height="92" fill="url(#orangeBand)"/>
+    <rect x="170" y="210" width="380" height="590" rx="10" filter="url(#paperNoise)"/>
+
+    <rect x="192" y="242" width="50" height="58" rx="4" fill="#2f2a26"/>
+    <text x="217" y="281" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="700" fill="#f4ebd7">A</text>
+
+    <text x="314" y="682" transform="rotate(-90 314 682)" font-family="Arial, Helvetica, sans-serif" font-size="44" font-weight="700" letter-spacing="1.4" fill="#1d1a18">CASSETTE MIX TAPE '94</text>
+    <text x="465" y="312" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#523c29">01. Summer Drive</text>
+    <text x="465" y="346" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#523c29">02. Tape Echo Dreams</text>
+    <text x="465" y="380" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#523c29">03. Seoul at Midnight</text>
+
+    <circle cx="260" cy="428" r="68" fill="#b9ab92"/>
+    <circle cx="260" cy="428" r="58" fill="#2b2927"/>
+    <circle cx="260" cy="428" r="20" fill="#8f8b84"/>
+    <path d="M260 378L273 404H247L260 378Z" fill="#4e4942"/>
+    <path d="M310 428L284 441V415L310 428Z" fill="#4e4942"/>
+    <path d="M260 478L247 452H273L260 478Z" fill="#4e4942"/>
+    <path d="M210 428L236 415V441L210 428Z" fill="#4e4942"/>
+
+    <circle cx="460" cy="428" r="68" fill="#b9ab92"/>
+    <circle cx="460" cy="428" r="58" fill="#2b2927"/>
+    <circle cx="460" cy="428" r="20" fill="#8f8b84"/>
+    <path d="M460 378L473 404H447L460 378Z" fill="#4e4942"/>
+    <path d="M510 428L484 441V415L510 428Z" fill="#4e4942"/>
+    <path d="M460 478L447 452H473L460 478Z" fill="#4e4942"/>
+    <path d="M410 428L436 415V441L410 428Z" fill="#4e4942"/>
+
+    <rect x="306" y="382" width="108" height="92" rx="12" fill="#524135"/>
+    <rect x="314" y="390" width="92" height="76" rx="10" fill="#161312"/>
+    <path d="M320 396C339 405 348 419 360 434C373 450 386 458 400 463" stroke="#4c3325" stroke-width="12" stroke-linecap="round" opacity="0.7"/>
+    <path d="M322 406C344 392 364 398 386 423" stroke="url(#windowGloss)" stroke-width="8" stroke-linecap="round"/>
+
+    <path d="M210 554L510 554L530 648L190 648L210 554Z" fill="#d5c3a6" fill-opacity="0.32"/>
+    <circle cx="204" cy="236" r="10" fill="#70624f"/>
+    <circle cx="516" cy="236" r="10" fill="#70624f"/>
+    <circle cx="204" cy="774" r="10" fill="#70624f"/>
+    <circle cx="516" cy="774" r="10" fill="#70624f"/>
+    <circle cx="360" cy="620" r="10" fill="#5f5142"/>
+  </g>
+
+  <g filter="url(#softShadow)">
+    <rect x="170" y="860" width="380" height="120" rx="10" fill="#282522"/>
+    <text x="212" y="915" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#7f786e">TRAEK</text>
+    <text x="210" y="939" font-family="Arial, Helvetica, sans-serif" font-size="18" font-weight="700" fill="#7f786e">COUNTER</text>
+    <rect x="282" y="884" width="118" height="56" rx="6" fill="#11100f"/>
+    <text x="341" y="925" text-anchor="middle" font-family="Courier New, monospace" font-size="46" font-weight="700" fill="#8b7b60">03:45</text>
+
+    <circle cx="286" cy="1048" r="18" fill="url(#ledGlow)"/>
+    <circle cx="286" cy="1048" r="8" fill="#9aff56"/>
+    <text x="306" y="1057" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="700" fill="#dad0bb">PLAYING</text>
+
+    <text x="166" y="1126" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#ddd3bf">REWIND</text>
+    <text x="320" y="1176" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#ddd3bf">PLAY</text>
+    <text x="432" y="1126" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#ddd3bf">FAST FORWARD</text>
+
+    <rect x="148" y="1146" width="116" height="116" rx="14" fill="url(#buttonFace)"/>
+    <rect x="148" y="1146" width="116" height="116" rx="14" stroke="#514840" stroke-width="4"/>
+    <path d="M222 1204L194 1188V1220L222 1204Z" fill="#302a27"/>
+    <path d="M198 1204L170 1188V1220L198 1204Z" fill="#302a27"/>
+
+    <circle cx="360" cy="1204" r="74" fill="url(#playGlow)"/>
+    <rect x="302" y="1146" width="116" height="116" rx="14" fill="url(#buttonFace)"/>
+    <rect x="302" y="1146" width="116" height="116" rx="14" stroke="#514840" stroke-width="4"/>
+    <path d="M396 1204L350 1174V1234L396 1204Z" fill="#4a3822"/>
+
+    <rect x="456" y="1146" width="116" height="116" rx="14" fill="url(#buttonFace)"/>
+    <rect x="456" y="1146" width="116" height="116" rx="14" stroke="#514840" stroke-width="4"/>
+    <path d="M496 1204L524 1188V1220L496 1204Z" fill="#302a27"/>
+    <path d="M520 1204L548 1188V1220L520 1204Z" fill="#302a27"/>
+  </g>
+
+  <rect x="286" y="1366" width="148" height="12" rx="6" fill="#4f4a43"/>
+</svg>
