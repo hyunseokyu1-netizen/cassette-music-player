@@ -490,23 +490,23 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   useEffect(() => {
     const subscription = AppState.addEventListener("change", async (nextState) => {
       if (nextState !== "active" || cancelRef.current || isFlippingRef.current) return;
+      // 명시적으로 정지된 상태(pause/stop)면 복구 불필요
+      if (!wasPlayingRef.current) return;
 
       if (soundRef.current) {
-        // Case A: 사운드가 로드된 상태 — 백그라운드에서 advance()가 호출되지 못한 경우
+        // Case A: 사운드가 로드됐지만 재생 중이 아님
+        // (position 체크 제거 — expo-av가 종료 후 position을 0으로 리셋하는 경우 대응)
         try {
           const status = await soundRef.current.getStatusAsync();
-          if (
-            status.isLoaded &&
-            !status.isPlaying &&
-            status.durationMillis &&
-            status.positionMillis >= status.durationMillis - 300
-          ) {
+          if (status.isLoaded && !status.isPlaying) {
             advance();
           }
-        } catch {}
-      } else if (wasPlayingRef.current && noiseRef.current === null) {
-        // Case B: stopTrack()은 완료됐지만 createAsync()가 JS 스레드 중단으로 완료되지 못한 경우
-        // itemIdxRef.current는 이미 advance()가 시도한 다음 트랙 인덱스를 가리킴
+        } catch {
+          // getStatusAsync 실패(이미 unload됨) → advance 시도
+          advance();
+        }
+      } else if (noiseRef.current === null) {
+        // Case B: 사운드도 노이즈도 없음 — stopTrack() 후 createAsync() 미완료 상태
         const items = getItems(sideRef.current);
         if (items.length > 0) {
           cancelRef.current = false;
