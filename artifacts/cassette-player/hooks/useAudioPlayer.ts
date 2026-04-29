@@ -5,7 +5,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Notifications from "expo-notifications";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, AppState, Platform } from "react-native";
-import { acquireWakeLock, releaseWakeLock } from "@/utils/wakeLock";
+import { acquireWakeLock, releaseWakeLock, startForegroundService, stopForegroundService } from "@/utils/wakeLock";
 
 // Android Doze 방지용 재생 알림 (Foreground Service 유지)
 const PLAYBACK_NOTIFICATION_ID = "cassette-playback";
@@ -313,7 +313,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setIsPlayingNoise(false);
     setPosition(0);
     setDuration(0);
-    dismissPlaybackNotification();
+    stopForegroundService();
   }, []);
 
   // tape-noise.wav 길이 (7.92s). seekMs = NOISE_FILE_MS - durationMs 위치에서
@@ -487,8 +487,8 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         setIsPlaying(true);
         wasPlayingRef.current = true;
         acquireWakeLock();
-        // Doze 방지 알림 표시 (Foreground Service 유지)
-        showPlaybackNotification(item.title);
+        // Foreground Service 시작 (Android Doze 완전 제외)
+        startForegroundService(item.title);
       } catch (err) {
         console.warn("playItemAt error:", err);
         if (!cancelRef.current) advance();
@@ -584,11 +584,6 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     if (!isPlaying) return;
     await soundRef.current?.pauseAsync();
     setIsPlaying(false);
-    // 일시정지 시 알림을 ⏸ 상태로 업데이트
-    const items = getItems(sideRef.current);
-    const cur = items[itemIdxRef.current];
-    const title = cur?.type === "track" ? cur.title : "";
-    updatePlaybackNotification(title, false);
   }, [isPlaying, isPlayingNoise, getItems]);
 
   const stopPlayback = useCallback(async () => {
