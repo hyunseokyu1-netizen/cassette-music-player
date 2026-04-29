@@ -15,7 +15,7 @@ async function setupNotificationChannel() {
   try {
     await Notifications.setNotificationChannelAsync("playback", {
       name: "재생 중",
-      importance: Notifications.AndroidImportance.HIGH,
+      importance: Notifications.AndroidImportance.LOW,
       showBadge: false,
       sound: null,
       vibrationPattern: null,
@@ -215,6 +215,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   // 백그라운드 트랙 전환 복구용: 재생 의도 상태 추적
   // (soundRef가 null인 전환 도중 JS가 중단됐을 때 AppState 복구에 사용)
   const wasPlayingRef = useRef(false);
+  // 트랙 자연 종료 여부: didJustFinish 시 true, playItemAt 시작 시 false
+  // AppState 복구 시 advance()와 resume() 구분에 사용
+  const trackEndedRef = useRef(false);
 
   const soundRef = useRef<Audio.Sound | null>(null);
   const noiseRef = useRef<Audio.Sound | null>(null);
@@ -303,6 +306,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const cancelAll = useCallback(async () => {
     cancelRef.current = true;
     wasPlayingRef.current = false;
+    trackEndedRef.current = false;
     releaseWakeLock();
     await Promise.all([stopTrack(), stopNoise()]);
     setIsPlaying(false);
@@ -420,7 +424,10 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setTapePosition(tp);
     // seek 중에는 isPlaying 업데이트 생략 (FF/RW 시 Play/Pause 버튼 flickering 방지)
     if (!isSeekingRef.current) setIsPlaying(status.isPlaying);
-    if (status.didJustFinish && !cancelRef.current) advance();
+    if (status.didJustFinish && !cancelRef.current) {
+      trackEndedRef.current = true;
+      advance();
+    }
   }, [advance, computeTapePos]);
 
   const playItemAt = useCallback(async (idx: number, initialPositionMs?: number) => {
@@ -428,6 +435,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     const items = getItems(sideRef.current);
     if (idx < 0 || idx >= items.length) return;
     const item = items[idx];
+    trackEndedRef.current = false; // 새 트랙 시작 → 종료 플래그 초기화
     setCurrentItemIdx(idx);
     itemIdxRef.current = idx;
 
@@ -500,11 +508,30 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
       if (soundRef.current) {
         // Case A: 사운드가 로드됐지만 재생 중이 아님
-        // (position 체크 제거 — expo-av가 종료 후 position을 0으로 리셋하는 경우 대응)
         try {
           const status = await soundRef.current.getStatusAsync();
           if (status.isLoaded && !status.isPlaying) {
-            advance();
+            if (trackEndedRef.current) {
+              // didJustFinish가 발생했지만 advance()가 미완료 상태 (WakeLock 실패 등)
+              trackEndedRef.current = false;
+              advance();
+            } else {
+              // 오디오 포커스 손실(알림, 전화 등)로 인한 일시정지 → 재개
+              try {
+                await soundRef.current.playAsync();
+                setIsPlaying(true);
+                acquireWakeLock();
+              } catch {
+                // 재개 실패 시 현재 아이템 다시 로드
+                const items = getItems(sideRef.current);
+                if (items.length > 0) {
+                  cancelRef.current = false;
+                  const idx = itemIdxRef.current >= 0 && itemIdxRef.current < items.length
+                    ? itemIdxRef.current : 0;
+                  playItemAtRef.current?.(idx);
+                }
+              }
+            }
           }
         } catch {
           // getStatusAsync 실패(이미 unload됨) → advance 시도
@@ -544,6 +571,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   const pause = useCallback(async () => {
     wasPlayingRef.current = false;
+    trackEndedRef.current = false;
     releaseWakeLock();
     if (isPlayingNoise) {
       cancelRef.current = true;
