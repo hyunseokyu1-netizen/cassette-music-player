@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Audio, AVPlaybackStatus } from "expo-av";
 import * as DocumentPicker from "expo-document-picker";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import * as Notifications from "expo-notifications";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, AppState, Platform } from "react-native";
@@ -14,7 +14,7 @@ async function setupNotificationChannel() {
   try {
     await Notifications.setNotificationChannelAsync("playback", {
       name: "재생 중",
-      importance: Notifications.AndroidImportance.DEFAULT,
+      importance: Notifications.AndroidImportance.HIGH,
       showBadge: false,
       sound: null,
       vibrationPattern: null,
@@ -211,6 +211,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const noiseCancelRef = useRef(false); // FF/REW 시작 시 진행 중인 노이즈만 취소 (cancelRef 오염 방지)
   const isSeekingRef = useRef(false);
   const noiseTickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // 백그라운드 트랙 전환 복구용: 재생 의도 상태 추적
+  // (soundRef가 null인 전환 도중 JS가 중단됐을 때 AppState 복구에 사용)
+  const wasPlayingRef = useRef(false);
 
   const soundRef = useRef<Audio.Sound | null>(null);
   const noiseRef = useRef<Audio.Sound | null>(null);
@@ -298,6 +301,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   const cancelAll = useCallback(async () => {
     cancelRef.current = true;
+    wasPlayingRef.current = false;
     await Promise.all([stopTrack(), stopNoise()]);
     setIsPlaying(false);
     setIsPlayingNoise(false);
@@ -382,6 +386,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         itemIdxRef.current = -1;
         setIsPlayingNoise(true);
         setIsPlaying(true);
+        wasPlayingRef.current = true;
         startNoiseTick(used); // fill noise는 콘텐츠 총합 위치에서 시작
         playNoiseDuration(fillMs).then((done) => {
           stopNoiseTick();
@@ -426,6 +431,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     if (item.type === "noise") {
       setIsPlayingNoise(true);
       setIsPlaying(true);
+      wasPlayingRef.current = true;
       setPosition(0);
       setDuration(item.duration);
       // 노이즈 시작 테이프 위치 = 앞 아이템 총합 + offset
@@ -467,6 +473,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
           }
         }
         setIsPlaying(true);
+        wasPlayingRef.current = true;
         // Doze 방지 알림 표시 (Foreground Service 유지)
         showPlaybackNotification(item.title);
       } catch (err) {
@@ -479,10 +486,13 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   useEffect(() => { playItemAtRef.current = playItemAt; }, [playItemAt]);
 
-  // 화면 꺼짐 후 복귀 시 트랙이 끝났는지 확인하고 다음 곡으로 진행
+  // 화면 꺼짐 후 복귀 시 트랙 전환 복구
   useEffect(() => {
     const subscription = AppState.addEventListener("change", async (nextState) => {
-      if (nextState === "active" && soundRef.current && !cancelRef.current) {
+      if (nextState !== "active" || cancelRef.current || isFlippingRef.current) return;
+
+      if (soundRef.current) {
+        // Case A: 사운드가 로드된 상태 — 백그라운드에서 advance()가 호출되지 못한 경우
         try {
           const status = await soundRef.current.getStatusAsync();
           if (
@@ -494,10 +504,21 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
             advance();
           }
         } catch {}
+      } else if (wasPlayingRef.current && noiseRef.current === null) {
+        // Case B: stopTrack()은 완료됐지만 createAsync()가 JS 스레드 중단으로 완료되지 못한 경우
+        // itemIdxRef.current는 이미 advance()가 시도한 다음 트랙 인덱스를 가리킴
+        const items = getItems(sideRef.current);
+        if (items.length > 0) {
+          cancelRef.current = false;
+          const idx = itemIdxRef.current >= 0 && itemIdxRef.current < items.length
+            ? itemIdxRef.current
+            : 0;
+          playItemAtRef.current?.(idx);
+        }
       }
     });
     return () => subscription.remove();
-  }, [advance]);
+  }, [advance, getItems]);
 
   const play = useCallback(async () => {
     if (isPlayingNoise) return;
@@ -517,6 +538,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   }, [isPlaying, isPlayingNoise, getItems]);
 
   const pause = useCallback(async () => {
+    wasPlayingRef.current = false;
     if (isPlayingNoise) {
       cancelRef.current = true;
       await stopNoise();
