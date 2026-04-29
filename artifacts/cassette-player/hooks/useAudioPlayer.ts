@@ -5,6 +5,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Notifications from "expo-notifications";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, AppState, Platform } from "react-native";
+import { acquireWakeLock, releaseWakeLock } from "@/utils/wakeLock";
 
 // Android Doze 방지용 재생 알림 (Foreground Service 유지)
 const PLAYBACK_NOTIFICATION_ID = "cassette-playback";
@@ -302,6 +303,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const cancelAll = useCallback(async () => {
     cancelRef.current = true;
     wasPlayingRef.current = false;
+    releaseWakeLock();
     await Promise.all([stopTrack(), stopNoise()]);
     setIsPlaying(false);
     setIsPlayingNoise(false);
@@ -387,6 +389,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         setIsPlayingNoise(true);
         setIsPlaying(true);
         wasPlayingRef.current = true;
+        acquireWakeLock();
         startNoiseTick(used); // fill noise는 콘텐츠 총합 위치에서 시작
         playNoiseDuration(fillMs).then((done) => {
           stopNoiseTick();
@@ -429,14 +432,10 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     itemIdxRef.current = idx;
 
     if (item.type === "noise") {
-      // 화면 꺼짐(백그라운드)일 때 noise 건너뜀 → JS 실행 최소화로 다음 트랙 재생 보장
-      if (AppState.currentState !== "active") {
-        if (!cancelRef.current) advance();
-        return;
-      }
       setIsPlayingNoise(true);
       setIsPlaying(true);
       wasPlayingRef.current = true;
+      acquireWakeLock();
       setPosition(0);
       setDuration(item.duration);
       // 노이즈 시작 테이프 위치 = 앞 아이템 총합 + offset
@@ -479,6 +478,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         }
         setIsPlaying(true);
         wasPlayingRef.current = true;
+        acquireWakeLock();
         // Doze 방지 알림 표시 (Foreground Service 유지)
         showPlaybackNotification(item.title);
       } catch (err) {
@@ -544,6 +544,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   const pause = useCallback(async () => {
     wasPlayingRef.current = false;
+    releaseWakeLock();
     if (isPlayingNoise) {
       cancelRef.current = true;
       await stopNoise();
