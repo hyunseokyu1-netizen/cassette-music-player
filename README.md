@@ -1,14 +1,36 @@
-# 🎵 Cassette Tape Music Player
+# Cassette — No Skip
 
-> A vintage 1980s-style cassette tape music player for Android, built with Expo (React Native).
+> A retro cassette tape music player for Android. No skip button. No algorithm. Just your music, played all the way through.
 
 [한국어 README →](./README.ko.md)
 
 ---
 
-## Overview
+## What is this?
 
-Cassette Tape Music Player brings the nostalgic feel of analog cassette tapes to your Android device. Load your own music files into Side A and Side B — just like a real cassette — and enjoy the authentic cassette experience with animated reels, tape noise, and flip animations.
+Remember when you actually listened to a whole song?
+
+Cassette Player brings back the era when music wasn't something you scrolled through — it was something you sat with.
+
+Load your own music onto Side A or Side B (30 minutes each, just like a real tape). Hit play. And stay with it.
+
+**No skip button.**
+Want to move forward? Hold FF — just like the real thing.
+
+**Tape noise between tracks.**
+That hiss isn't a bug. It's the texture of analog.
+
+**Side A + Side B. 60 minutes total.**
+Curate what actually matters to you.
+
+**Your files only.**
+No streaming. No algorithm deciding what you hear next. Just you and your music.
+
+In a world of infinite playlists and 10-second attention spans, Cassette Player dares you to slow down.
+
+You might rediscover a song you always used to skip past.
+
+---
 
 ## Screenshots
 
@@ -23,27 +45,31 @@ Cassette Tape Music Player brings the nostalgic feel of analog cassette tapes to
   <em>Player (Side A) &nbsp;·&nbsp; Library &nbsp;·&nbsp; Player (Side B, Playing)</em>
 </p>
 
+---
+
 ## Features
 
-- **A/B Side System** — 6 tracks per side, just like a real cassette tape
-- **Realistic Spool Animation** — reel rotation speed is physically accurate (smaller radius = faster spin), powered by Reanimated worklets
-- **Tape Noise** — authentic tape hiss plays between every track change
-- **Cassette Flip Animation** — smooth scaleX flip animation when switching between Side A and Side B
-- **Background Audio** — continues playing when the screen is off or the app is in the background (via Foreground Service on Android)
-- **Track Persistence** — your track list is saved across app restarts via AsyncStorage
-- **FF / REW** — fast-forward and rewind with immediate reel speed response
+- **No Skip Button** — hold FF to fast-forward, just like a real cassette tape
+- **A/B Side System** — 30 minutes per side, curate what goes on each
+- **Tape Noise** — authentic tape hiss plays between every track
+- **Cassette Flip Animation** — smooth scaleX flip when switching sides
+- **Realistic Spool Animation** — reel rotation speed is physically accurate (smaller radius = faster spin)
+- **Background Audio** — keeps playing when the screen is off (Foreground Service on Android)
+- **Track Persistence** — your track list is saved across app restarts
+- **FF / REW** — fast-forward and rewind with real tape sound effects
 - **Vintage UI** — warm brown/beige color theme inspired by 1980s cassette players
+- **Local files only** — your music, no subscriptions, no internet required
 
 ## Tech Stack
 
 | Category | Package |
 |---|---|
-| Framework | Expo (React Native) |
+| Framework | Expo SDK 54 (React Native) |
 | Audio | expo-av |
 | Animation | react-native-reanimated |
 | SVG UI | react-native-svg |
 | File Picker | expo-document-picker |
-| Background Service | expo-notifications (Foreground Service) |
+| Background Service | expo-notifications (Foreground Service) + custom WakeLock module |
 | Persistence | @react-native-async-storage/async-storage |
 | Haptics | expo-haptics |
 
@@ -53,18 +79,19 @@ Cassette Tape Music Player brings the nostalgic feel of analog cassette tapes to
 artifacts/cassette-player/
 ├── app/
 │   ├── player.tsx          # Main player screen
-│   └── library.tsx         # A/B track management (6 slots per side)
+│   └── library.tsx         # A/B track management
 ├── components/
 │   ├── CassetteTape.tsx    # SVG cassette body (gradients, screws, rollers, label)
 │   ├── Spool.tsx           # Animated reel with physics-based rotation
 │   ├── ControlButtons.tsx  # Playback controls (Play, Pause, FF, REW, Flip)
 │   └── ProgressBar.tsx     # Track progress display
-├── contexts/
-│   └── AudioPlayerContext.tsx  # Shared audio state provider
 ├── hooks/
-│   └── useAudioPlayer.ts   # A/B side logic, tape noise, file picker, persistence
-└── constants/
-    └── colors.ts           # Vintage color theme
+│   └── useAudioPlayer.ts   # Core playback logic (A/B sides, tape noise, persistence)
+├── utils/
+│   └── wakeLock.ts         # Android WakeLock + Foreground Service bridge
+└── tools/
+    ├── build-apk.sh        # APK build script (direct install)
+    └── build-store.sh      # AAB build script (Play Store)
 ```
 
 ## Getting Started
@@ -73,20 +100,14 @@ artifacts/cassette-player/
 
 - Node.js 20+
 - pnpm
-- Expo CLI (`npm install -g expo-cli`)
 - Android device or emulator
 
 ### Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/hyunseokyu1-netizen/cassette-music-player.git
 cd cassette-music-player
-
-# Install dependencies
 pnpm install
-
-# Navigate to the app
 cd artifacts/cassette-player
 pnpm install
 ```
@@ -94,33 +115,39 @@ pnpm install
 ### Run
 
 ```bash
-# Start Expo development server
-npx expo start
+# Connect device first
+adb reverse tcp:8081 tcp:8081
 
-# Run on Android
+# Build & install on Android
 npx expo run:android
 ```
 
-### Build (Production APK)
+### Build for Play Store
 
 ```bash
-# Using EAS Build
-eas build --platform android --profile production
+# AAB (Play Store upload)
+./tools/build-store.sh
+
+# APK (direct install / testing)
+./tools/build-apk.sh
 ```
+
+Output: `artifacts/cassette-player/android/app/build/outputs/bundle/release/app-release.aab`
 
 ## How to Use
 
 1. Open the **Library** tab
-2. Tap a slot on **Side A** or **Side B** to add a music file
+2. Tap **+ Add** on **Side A** or **Side B** to add your music files
 3. Go back to the **Player** tab
 4. Press **Play** — the cassette reels will start spinning
-5. Use the **Flip** button to switch between Side A and Side B
+5. Hold **FF** to fast-forward through a track (no instant skip)
+6. Use the **Flip** button to switch between Side A and Side B
 
 ## Notes
 
-- Uses `expo-document-picker` for file selection (no storage permissions required in Expo Go)
-- Does **not** use `expo-media-library` (breaks in Expo Go due to AUDIO permission conflicts)
-- Background audio is handled via `expo-notifications` Foreground Service to survive Android Doze mode
+- Local MP3/audio files only — no streaming support (by design)
+- Background audio handled via `expo-notifications` Foreground Service + `PARTIAL_WAKE_LOCK` to survive Android Doze mode
+- See [`tools/BACKGROUND_AUDIO.md`](./tools/BACKGROUND_AUDIO.md) for implementation details that shouldn't be changed
 
 ## License
 
